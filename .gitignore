@@ -1,0 +1,16 @@
+# ignore files with no extention:
+*
+!*/
+!*.*
+
+# normal ignores:
+*.exe
+*.out
+nimcache
+*.pdb
+*.ilk
+.*
+!.gitignore
+*.dll
+__pycache__
+bindings/generated
