@@ -6,4 +6,4 @@ srcDir        = "src"
 bin           = @["folx"]
 
 requires "nim >= 1.4.8"
-requires "https://github.com/treeform/windy", "boxy", "opengl", "pixie"
+requires "https://github.com/FolxTeam/plainwindy", "pixie"
