@@ -1,4 +1,4 @@
-import strutils, os
+import strutils, os, times, math
 import plainwindy, pixie
 import render
 
@@ -36,12 +36,20 @@ var
   r = image.newContext
 
 
+proc animate(dt: float32): bool =
+  if pos.float32 != visual_pos:
+    let pvp = (visual_pos * font.size).round.int32
+    visual_pos += (pos.float32 - visual_pos) * (0.000005 / dt).min(1)
+    if abs(visual_pos - pos.float32) < 1 / font.size / 2.1:
+      visual_pos = pos.float32
+    if pvp != (visual_pos * font.size).round.int32: result = true
+
+
 proc text_area(r: Context, box: Rect, pos: float32, size: int) =
   var y = box.y - font.size * 1.27 * (pos mod 1)
-  for ts in textr{pos.int..pos.ceil.int+size}:
-    image.drawByImage ts, ivec2(round(box.x).int32, round(y).int32), ivec2(round(box.w).int32, round(box.h).int32), rgba(255, 255, 255, 255)
+  for i, ts in textr{pos.int..pos.ceil.int+size}:
+    image.drawByImage ts, ivec2(round(box.x).int32, round(y).int32), ivec2(round(box.x + box.w).int32, round(y + box.h).int32), rgb(255, 255, 255)
     y += font.size * 1.27
-
 
 proc scrollbar(r: Context, box: Rect, pos: float32, size: int, total: int) =
   if total == 0: return
@@ -56,15 +64,11 @@ proc scrollbar(r: Context, box: Rect, pos: float32, size: int, total: int) =
   r.fillStyle = rgba(48, 48, 48, 255)
   r.fillRect box
 
+
 proc display =
   let
     size = (window.size.y.float32 / font.size).ceil.int
     total = text.len
-  
-  if abs(visual_pos - pos.float32) < 0.01:
-    visual_pos = pos.float32
-  else:
-    visual_pos += (pos.float32 - visual_pos) / 3
 
   image.fill rgba(32, 32, 32, 255)
 
@@ -82,6 +86,7 @@ proc display =
 
   window.draw image
 
+
 window.onCloseRequest = proc =
   close window
   quit(0)
@@ -94,11 +99,22 @@ window.onResize = proc =
   if window.size.x * window.size.y == 0: return
   image = newImage(window.size.x, window.size.y)
   r = image.newContext
+  display()
+
 
 display()
 window.visible = true
 
+var pt = now()
 while not window.closeRequested:
-  display()
+  let nt = now()
   pollEvents()
-  sleep 2
+  
+  let dt = now()
+  if animate((dt - nt).inMicroseconds.int / 1_000_000):
+    display()
+  pt = dt
+
+  let ct = now()
+  if (ct - nt).inMilliseconds < 10:
+    sleep(10 - (ct - nt).inMilliseconds.int)

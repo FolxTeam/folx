@@ -2,9 +2,8 @@ import pixie, pixie/blends
 
 {.push, checks: off.}
 
-proc drawByImage*(r: Image, img: Image, pos: IVec2, size: IVec2, color: ColorRGBA) =
+proc drawByImage*(r: Image, img: Image, pos: IVec2, size: IVec2, color: ColorRGB) =
   ## fast draw image
-  if color.a == 0: return
 
   # clip
   let pos2 = ivec2(max(-pos.x, 0), max(-pos.y, 0))
@@ -21,7 +20,7 @@ proc drawByImage*(r: Image, img: Image, pos: IVec2, size: IVec2, color: ColorRGB
       idst = (pos.y + y) * r.width + pos.x
       isrc = (pos2.y + y) * img.width + pos2.x
     for _ in 0..<size.x:
-      r.data[idst] = blendNormal(r.data[idst], img.data[isrc])
+      r.data[idst] = blendNormal(r.data[idst], rgba(color.r, color.g, color.b, img.data[isrc].a))
       inc isrc
       inc idst
 
