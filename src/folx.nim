@@ -1,11 +1,19 @@
 import strutils, os
 import plainwindy, pixie
+import render
 
 proc `{}`[T](x: seq[T], s: Slice[int]): seq[T] =
   ## safe slice a seq
   if x.len == 0: return
   let s = Slice[int](a: s.a.max(x.low).min(x.high), b: s.b.max(x.low).min(x.high))
   x[s]
+
+proc render(text: string, font: Font): Image =
+  let ts = font.typeset(text)
+  let bounds = ts.computeBounds
+  if bounds.x < 1 or bounds.y < 1: return newImage(1, font.size.ceil.int)
+  result = newImage(bounds.x.ceil.int, bounds.y.ceil.int)
+  result.fillText(ts)
 
 
 let window = newWindow("folx", ivec2(1280, 900), visible=false)
@@ -15,10 +23,10 @@ font.size = 11
 font.paint.color = color(1, 1, 1, 1)
 
 let text = "src/folx.nim".readFile.split("\n")
-var textr = newSeq[Arrangement](text.len)
+var textr = newSeq[Image](text.len)
 
 for i, s in text:
-  textr[i] = font.typeset(s)
+  textr[i] = s.render(font)
 
 
 var
@@ -29,10 +37,10 @@ var
 
 
 proc text_area(r: Context, box: Rect, pos: float32, size: int) =
-  var y = round(box.y - font.size * 1.27 * (pos mod 1))
+  var y = box.y - font.size * 1.27 * (pos mod 1)
   for ts in textr{pos.int..pos.ceil.int+size}:
-    image.fillText ts, translate vec2(box.x, y)
-    y = round(y + font.size * 1.27)
+    image.drawByImage ts, ivec2(round(box.x).int32, round(y).int32), ivec2(round(box.w).int32, round(box.h).int32), rgba(255, 255, 255, 255)
+    y += font.size * 1.27
 
 
 proc scrollbar(r: Context, box: Rect, pos: float32, size: int, total: int) =
@@ -93,3 +101,4 @@ window.visible = true
 while not window.closeRequested:
   display()
   pollEvents()
+  sleep 2
