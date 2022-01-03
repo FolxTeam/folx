@@ -1,4 +1,4 @@
-import strutils, os, times, math, sequtils
+import os, times, math, strformat
 import plainwindy, pixie
 import render, syntax_highlighting
 
@@ -16,7 +16,7 @@ font.size = 11
 font.paint.color = color(1, 1, 1, 1)
 var gt = GlyphTable(font: font)
 
-let text = "src/folx.nim".readFile.split("\n").map(parseNimCode)
+let text = "src/folx.nim".readFile.parseNimCode.lines
 
 
 var
@@ -35,11 +35,17 @@ proc animate(dt: float32): bool =
     if pvp != (visual_pos * font.size).round.int32: result = true
 
 
+proc line_numbers(r: Context, box: Rect, pos: float32, size: int) =
+  var y = round(box.y - font.size * 1.27 * (pos mod 1))
+  for i in pos.int..(pos.ceil.int+size).min(text.high):
+    image.draw @[(sLineNumber, &"{i+1:>5} ")], rect(vec2(box.x, y), vec2(box.x + box.w, y + box.h)), gt
+    y += round(font.size * 1.27)
+
 proc text_area(r: Context, box: Rect, pos: float32, size: int) =
-  var y = box.y - font.size * 1.27 * (pos mod 1)
+  var y = round(box.y - font.size * 1.27 * (pos mod 1))
   for i, s in text{pos.int..pos.ceil.int+size}:
     image.draw s, rect(vec2(box.x, y), vec2(box.x + box.w, y + box.h)), gt
-    y += font.size * 1.27
+    y += round(font.size * 1.27)
 
 proc scrollbar(r: Context, box: Rect, pos: float32, size: int, total: int) =
   if total == 0: return
@@ -62,8 +68,13 @@ proc display =
 
   image.fill rgba(32, 32, 32, 255)
 
+  r.line_numbers(
+    box = rect(vec2(), vec2(58, window.size.vec2.y)),
+    pos = visual_pos,
+    size = size,
+  )
   r.text_area(
-    box = rect(vec2(), window.size.vec2 - vec2(10, 0)),
+    box = rect(vec2(58, 0), window.size.vec2 - vec2(10, 0)),
     pos = visual_pos,
     size = size,
   )

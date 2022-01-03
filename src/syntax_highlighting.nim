@@ -20,6 +20,8 @@ type
     sStringLitEscape
 
     sTodoComment
+
+    sLineNumber
   
   CodeSegment* = tuple
     kind: CodeSegmentKind
@@ -40,6 +42,7 @@ proc color*(sk: CodeSegmentKind): ColorRGB =
   of sFunction: rgb(220, 220, 170)
   of sComment: rgb(106, 153, 85)
   of sTodoComment: rgb(255, 140, 0)
+  of sLineNumber: rgb(133, 133, 133)
   else: rgb(212, 212, 212)
 
 
@@ -118,7 +121,6 @@ proc parseNimCode*(code: string): seq[CodeSegment] =
   doassert nimparser.match(code, result).ok
 
 proc lines*(scs: seq[CodeSegment]): seq[seq[CodeSegment]] =
-  ## todo
   result = @[newSeq[CodeSegment]()]
   for x in scs:
     let s = x.text.split("\n")
