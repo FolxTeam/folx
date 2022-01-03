@@ -1,6 +1,6 @@
 import strutils, os, times, math
 import plainwindy, pixie
-import render
+import render, syntax_highlighting
 
 proc `{}`[T](x: seq[T], s: Slice[int]): seq[T] =
   ## safe slice a seq
