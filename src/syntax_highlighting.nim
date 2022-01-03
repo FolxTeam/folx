@@ -1,4 +1,4 @@
-import macros
+import strutils, sequtils
 import pixie, npeg
 
 type
@@ -31,8 +31,8 @@ type
 
 proc color*(sk: CodeSegmentKind): ColorRGB =
   case sk
-  of sKeyword, sOperatorWord: rgb(84, 144, 185)
-  of sControlFlow: rgb(160, 117, 176)
+  of sKeyword, sOperatorWord: rgb(86, 156, 214)
+  of sControlFlow: rgb(197, 134, 192)
   else: rgb(255, 255, 255)
 
 
@@ -53,6 +53,9 @@ let nimparser = peg("segments", d: seq[CodeSegment]):
     "and"|"as"|"cast"|"div"|"in"|"is"|"isnot"|"mod"|"not"|"notin"|"or"|"shl"|"shr"|"xor"
   )
 
+  word <- >ident:
+    d.add (kind: sText, text: $1)
+
   keyword <- >keyword_str * &!(Alnum|'_'):
     d.add (kind: sKeyword, text: $1)
 
@@ -65,9 +68,9 @@ let nimparser = peg("segments", d: seq[CodeSegment]):
   operator <- >+(Graph - (Alnum|'"'|'\'')):
     d.add (kind: sOperator, text: $1)
 
-  something <- keyword|controlFlow|operatorWord|operator
+  something <- keyword|controlFlow|operatorWord|operator|word
 
-  text <- >@&something:
+  text <- >1:
     d.add (kind: sText, text: $1)
 
   segment <- something|text
@@ -75,3 +78,12 @@ let nimparser = peg("segments", d: seq[CodeSegment]):
 
 proc parseNimCode*(code: string): seq[CodeSegment] =
   doassert nimparser.match(code, result).ok
+
+proc lines*(scs: seq[CodeSegment]): seq[seq[CodeSegment]] =
+  ## todo
+  result = @[newSeq[CodeSegment]()]
+  for x in scs:
+    let s = x.text.split("\n")
+    result[^1].add (kind: x.kind, text: s[0])
+    if s.len > 1:
+      result.add s[1..^1].mapit(@[(kind: x.kind, text: it)])

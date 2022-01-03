@@ -1,4 +1,4 @@
-import strutils, os, times, math
+import strutils, os, times, math, sequtils
 import plainwindy, pixie
 import render, syntax_highlighting
 
@@ -8,25 +8,15 @@ proc `{}`[T](x: seq[T], s: Slice[int]): seq[T] =
   let s = Slice[int](a: s.a.max(x.low).min(x.high), b: s.b.max(x.low).min(x.high))
   x[s]
 
-proc render(text: string, font: Font): Image =
-  let ts = font.typeset(text)
-  let bounds = ts.computeBounds
-  if bounds.x < 1 or bounds.y < 1: return newImage(1, font.size.ceil.int)
-  result = newImage(bounds.x.ceil.int, bounds.y.ceil.int)
-  result.fillText(ts)
-
 
 let window = newWindow("folx", ivec2(1280, 900), visible=false)
 
 let font = readFont"resources/FiraCode-Regular.ttf"
 font.size = 11
 font.paint.color = color(1, 1, 1, 1)
+var gt = GlyphTable(font: font)
 
-let text = "src/folx.nim".readFile.split("\n")
-var textr = newSeq[Image](text.len)
-
-for i, s in text:
-  textr[i] = s.render(font)
+let text = "src/folx.nim".readFile.split("\n").map(parseNimCode)
 
 
 var
@@ -47,8 +37,8 @@ proc animate(dt: float32): bool =
 
 proc text_area(r: Context, box: Rect, pos: float32, size: int) =
   var y = box.y - font.size * 1.27 * (pos mod 1)
-  for i, ts in textr{pos.int..pos.ceil.int+size}:
-    image.drawByImage ts, ivec2(round(box.x).int32, round(y).int32), ivec2(round(box.x + box.w).int32, round(y + box.h).int32), rgb(255, 255, 255)
+  for i, s in text{pos.int..pos.ceil.int+size}:
+    image.draw s, rect(vec2(box.x, y), vec2(box.x + box.w, y + box.h)), gt
     y += font.size * 1.27
 
 proc scrollbar(r: Context, box: Rect, pos: float32, size: int, total: int) =
@@ -87,13 +77,20 @@ proc display =
   window.draw image
 
 
+var displayRequest = false
+
 window.onCloseRequest = proc =
   close window
   quit(0)
 
 window.onScroll = proc =
   if window.scrollDelta.y == 0: return
-  pos = (pos - window.scrollDelta.y.ceil.int * 3).max(0).min(text.high)
+  if window.buttonDown[KeyLeftControl] or window.buttonDown[KeyRightControl]:
+    font.size = (font.size + window.scrollDelta.y.ceil).max(1)
+    clear gt
+    displayRequest = true
+  else:
+    pos = (pos - window.scrollDelta.y.ceil.int * 3).max(0).min(text.high)
 
 window.onResize = proc =
   if window.size.x * window.size.y == 0: return
@@ -111,8 +108,10 @@ while not window.closeRequested:
   pollEvents()
   
   let dt = now()
-  if animate((dt - nt).inMicroseconds.int / 1_000_000):
+  displayRequest = displayRequest or animate((dt - nt).inMicroseconds.int / 1_000_000)
+  if displayRequest:
     display()
+    displayRequest = false
   pt = dt
 
   let ct = now()
