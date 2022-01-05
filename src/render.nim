@@ -40,24 +40,28 @@ proc drawGlyph(r: Image, g: Glyph, pos: IVec2, size: IVec2, color: ColorRGB) =
 proc render(text: Rune, font: Font): Image =
   let ts = font.typeset($text)
   let bounds = ts.computeBounds
-  if bounds.x < 1 or bounds.y < 1: return newImage(1, font.size.ceil.int)
+  if bounds.x < 1 or bounds.y < 1: return nil
   result = newImage(bounds.x.ceil.int, bounds.y.ceil.int)
   result.fillText(ts)
 
 proc render(gt: var GlyphTable, c: Rune) =
   let img = c.render(gt.font)
-  gt.glyphs[c] = (width: img.width.int32, height: img.height.int32, data: img.data.mapit(it.a))
+  if img == nil:
+    gt.glyphs[c] = Glyph.default
+  else:
+    gt.glyphs[c] = (width: img.width.int32, height: img.height.int32, data: img.data.mapit(it.a))
 
 proc clear*(gt: var GlyphTable) =
   clear gt.glyphs
 
 
-proc draw*(r: Image, text: seq[CodeSegment], box: Rect, gt: var GlyphTable) =
-  var (x, y, w, h) = (box.x, box.y, box.w, box.h)
+proc draw*(r: Image, text: seq[ColoredText], box: Rect, gt: var GlyphTable) =
+  var (x, y, w, h) = (box.x.round.int32, box.y.round.int32, box.w.round.int32, box.h.round.int32)
   for cs in text:
+    let color = cs.color
     for c in cs.text.runes:
       if c notin gt.glyphs: gt.render(c)
-      r.drawGlyph gt.glyphs[c], ivec2(x.round.int32, y.round.int32), ivec2(w.round.int32, h.round.int32), cs.kind.color
-      let b = vec2(gt.glyphs[c].width.float32, gt.glyphs[c].height.float32)
-      x += b.x
-      w -= b.x
+      r.drawGlyph gt.glyphs[c], ivec2(x, y), ivec2(w, h), color
+      let bx = gt.glyphs[c].width
+      x += bx
+      w -= bx

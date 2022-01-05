@@ -28,8 +28,8 @@ type
     text: string
 
   ColoredText* = tuple
+    color: ColorRgb
     text: string
-    color: Color
 
 
 proc color*(sk: CodeSegmentKind): ColorRGB =
@@ -44,6 +44,17 @@ proc color*(sk: CodeSegmentKind): ColorRGB =
   of sTodoComment: rgb(255, 140, 0)
   of sLineNumber: rgb(133, 133, 133)
   else: rgb(212, 212, 212)
+
+proc lines*(scs: seq[CodeSegment]): seq[seq[CodeSegment]] =
+  result = @[newSeq[CodeSegment]()]
+  for x in scs:
+    let s = x.text.split("\n")
+    result[^1].add (kind: x.kind, text: s[0])
+    if s.len > 1:
+      result.add s[1..^1].mapit(@[(kind: x.kind, text: it)])
+
+proc color*(scs: seq[CodeSegment]): seq[ColoredText] =
+  scs.mapit((color: it.kind.color, text: it.text))
 
 
 let nimparser = peg("segments", d: seq[CodeSegment]):
@@ -119,11 +130,3 @@ let nimparser = peg("segments", d: seq[CodeSegment]):
 
 proc parseNimCode*(code: string): seq[CodeSegment] =
   doassert nimparser.match(code, result).ok
-
-proc lines*(scs: seq[CodeSegment]): seq[seq[CodeSegment]] =
-  result = @[newSeq[CodeSegment]()]
-  for x in scs:
-    let s = x.text.split("\n")
-    result[^1].add (kind: x.kind, text: s[0])
-    if s.len > 1:
-      result.add s[1..^1].mapit(@[(kind: x.kind, text: it)])

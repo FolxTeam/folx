@@ -1,4 +1,4 @@
-import os, times, math, strformat
+import os, times, math, strformat, sequtils
 import plainwindy, pixie
 import render, syntax_highlighting
 
@@ -16,29 +16,29 @@ font.size = 11
 font.paint.color = color(1, 1, 1, 1)
 var gt = GlyphTable(font: font)
 
-let text = "src/folx.nim".readFile.parseNimCode.lines
+let text = "src/folx.nim".readFile.parseNimCode.lines.map(color)
 
 
 var
-  pos = 0
-  visual_pos = pos.float32
+  pos = 0'f32
+  visual_pos = pos
   image = newImage(1280, 720)
   r = image.newContext
 
 
 proc animate(dt: float32): bool =
-  if pos.float32 != visual_pos:
+  if pos != visual_pos:
     let pvp = (visual_pos * font.size).round.int32
-    visual_pos += (pos.float32 - visual_pos) * (0.000005 / dt).min(1)
-    if abs(visual_pos - pos.float32) < 1 / font.size / 2.1:
-      visual_pos = pos.float32
+    visual_pos += (pos - visual_pos) * (0.000005 / dt).min(1)
+    if abs(visual_pos - pos) < 1 / font.size / 2.1:
+      visual_pos = pos
     if pvp != (visual_pos * font.size).round.int32: result = true
 
 
 proc line_numbers(r: Context, box: Rect, pos: float32, size: int) =
   var y = round(box.y - font.size * 1.27 * (pos mod 1))
   for i in pos.int..(pos.ceil.int+size).min(text.high):
-    image.draw @[(sLineNumber, &"{i+1:>5} ")], rect(vec2(box.x, y), vec2(box.x + box.w, y + box.h)), gt
+    image.draw @[(sLineNumber.color, &"{i+1:>5} ")], rect(vec2(box.x, y), vec2(box.x + box.w, y + box.h)), gt
     y += round(font.size * 1.27)
 
 proc text_area(r: Context, box: Rect, pos: float32, size: int) =
@@ -101,7 +101,7 @@ window.onScroll = proc =
     clear gt
     displayRequest = true
   else:
-    pos = (pos - window.scrollDelta.y.ceil.int * 3).max(0).min(text.high)
+    pos = (pos - window.scrollDelta.y * 3).max(0).min(text.high.float32)
 
 window.onResize = proc =
   if window.size.x * window.size.y == 0: return
