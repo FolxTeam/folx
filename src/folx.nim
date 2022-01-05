@@ -2,11 +2,8 @@ import os, times, math, sequtils, unicode, strutils
 import plainwindy, pixie
 import render, syntax_highlighting
 
-proc `{}`[T](x: seq[T], s: Slice[int]): seq[T] =
-  ## safe slice a seq
-  if x.len == 0: return
-  let s = Slice[int](a: s.a.max(x.low).min(x.high), b: s.b.max(x.low).min(x.high))
-  x[s]
+proc bound[T](x: T, s: Slice[T]): T = x.max(s.a).min(s.b)
+proc bound[T](x, s: Slice[T]): Slice[T] = Slice[T](a: x.a.bound(s), b: x.b.bound(s))
 
 proc indentation(text: seq[string]): seq[tuple[len: seq[int], has_graph: bool]] =
   proc indentation(line: string, prev: seq[int]): tuple[len: seq[int], has_graph: bool] =
@@ -35,6 +32,68 @@ proc indentation(text: seq[string]): seq[tuple[len: seq[int], has_graph: bool]] 
   for i in countdown(result.high, 0):
     if result[i].has_graph: lgl = result[i].len.len
     elif result[i].len.len > lgl: result[i].len = result[i].len[0..<lgl]
+
+
+proc line_numbers(
+  r: Context,
+  image: Image,
+  box: Rect,
+  pos: float32,
+  gt: var GlyphTable,
+  bg: ColorRgb,
+  text: seq[seq[ColoredText]],
+  ) =
+  let
+    size = (box.h / gt.font.size).ceil.int
+
+  var y = round(box.y - gt.font.size * 1.27 * (pos mod 1))
+  for i in (pos.int..pos.ceil.int+size).bound(text.low..text.high):
+    let s = $(i+1)
+    let w = float32 s.width(gt)
+    image.draw @[(sLineNumber.color, s)], rect(vec2(box.x + box.w - w, y), vec2(w, box.h - y)), gt, bg
+    y += round(gt.font.size * 1.27)
+
+proc text_area(
+  r: Context,
+  image: Image,
+  box: Rect,
+  pos: float32,
+  gt: var GlyphTable,
+  bg: ColorRgb,
+  text: seq[seq[ColoredText]],
+  indentation: seq[tuple[len: seq[int], has_graph: bool]],
+  ) =
+  assert text.len == indentation.len
+
+  let
+    size = (box.h / gt.font.size).ceil.int
+    space_w = " ".width(gt)
+
+  let dy = round(gt.font.size * 1.27)
+  var y = box.y - dy * (pos mod 1)
+
+  for i in (pos.int..pos.ceil.int+size).bound(text.low..text.high):
+    image.draw text[i], rect(vec2(box.x, y), vec2(box.x + box.w, y + box.h)), gt, bg
+
+    var x = box.x.round.int
+    for i, l in indentation[i].len:
+      image.vertical_line x.int32, y.int32, dy.int32, rgb(64, 64, 64)
+      x += l * space_w
+
+    y += dy
+
+proc scrollbar(r: Context, box: Rect, pos: float32, size: int, total: int) =
+  if total == 0: return
+  let
+    a = pos / total.float32
+    b = (pos + size.float32) / total.float32
+  
+  var box = box
+  box.xy = vec2(box.x, box.y + (box.h * a))
+  box.wh = vec2(box.w, box.h * (b - a))
+
+  r.fillStyle = rgba(48, 48, 48, 255)
+  r.fillRect box
 
 
 let window = newWindow("folx", ivec2(1280, 900), visible=false)
@@ -69,62 +128,6 @@ proc animate(dt: float32): bool =
     if pvp != (visual_pos * font.size).round.int32: result = true
 
 
-proc line_numbers(
-  r: Context,
-  box: Rect,
-  pos: float32,
-  size: int,
-  gt: var GlyphTable,
-  text: seq[seq[ColoredText]],
-  ) =
-  var y = round(box.y - font.size * 1.27 * (pos mod 1))
-  for i in pos.int..(pos.ceil.int+size).min(text.high):
-    let s = $(i+1)
-    let w = float32 s.width(gt)
-    image.draw @[(sLineNumber.color, s)], rect(vec2(box.x + box.w - w, y), vec2(w, box.h - y)), gt
-    y += round(font.size * 1.27)
-
-proc text_area(
-  r: Context,
-  box: Rect,
-  pos: float32,
-  size: int,
-  gt: var GlyphTable,
-  text: seq[seq[ColoredText]],
-  indentation: seq[tuple[len: seq[int], has_graph: bool]],
-  ) =
-  assert text.len == indentation.len
-
-  var y = round(box.y - font.size * 1.27 * (pos mod 1))
-  let space_w = " ".width(gt)
-
-  for i, s in text{pos.int..pos.ceil.int+size}:
-    let l = i + pos.int.max(text.low).min(text.high)
-
-    image.draw s, rect(vec2(box.x, y), vec2(box.x + box.w, y + box.h)), gt
-
-    r.fillStyle = rgb(64, 64, 64)
-    var x = box.x.round.int
-    for i, l in indentation[l].len:
-      r.fillRect rect(vec2(x.float32, y), vec2(1, font.size * 1.27))
-      x += l * space_w
-
-    y += round(font.size * 1.27)
-
-proc scrollbar(r: Context, box: Rect, pos: float32, size: int, total: int) =
-  if total == 0: return
-  let
-    a = pos / total.float32
-    b = (pos + size.float32) / total.float32
-  
-  var box = box
-  box.xy = vec2(box.x, box.y + (box.h * a))
-  box.wh = vec2(box.w, box.h * (b - a))
-
-  r.fillStyle = rgba(48, 48, 48, 255)
-  r.fillRect box
-
-
 proc display =
   let
     size = (window.size.y.float32 / font.size).ceil.int
@@ -132,20 +135,22 @@ proc display =
 
     line_number_width = float32 ($total).width(gt)
 
-  image.fill rgba(32, 32, 32, 255)
+  image.fill rgbx(32, 32, 32, 255)
 
   r.line_numbers(
+    image = image,
     box = rect(vec2(10, 0), vec2(line_number_width, window.size.vec2.y)),
     pos = visual_pos,
-    size = size,
     gt = gt,
+    bg = rgb(32, 32, 32),
     text = text_colored,
   )
   r.text_area(
+    image = image,
     box = rect(vec2(line_number_width + 30, 0), window.size.vec2 - vec2(10, 0)),
     pos = visual_pos,
-    size = size,
     gt = gt,
+    bg = rgb(32, 32, 32),
     text = text_colored,
     indentation = text_indentation,
   )

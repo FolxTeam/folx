@@ -59,43 +59,28 @@ func color*(scs: seq[CodeSegment]): seq[ColoredText] =
 proc parseNimCode*(code: string): seq[CodeSegment] =
   const parser = peg("segments", d: seq[CodeSegment]):
     ident <- Alpha * *(Alnum|'_')
-    
-    functionDeclKeyword <- "func"|"proc"|"template"|"iterator"|"converter"|"macro"|"method"
-    keyword_str <- (
-      functionDeclKeyword|
-      "addr"|"asm"|"bind"|"concept"|"const"|"discard"|"distinct"|"enum"|"export"|"from"|
-      "import"|"include"|"interface"|"let"|"mixin"|"nil"|"object"|"of"|"out"|"ptr"|
-      "ref"|"static"|"tuple"|"type"|"using"|"var"|"true"|"false"|"off"|"on"|"low"|"high"|"lent"
-    )
-    controlFlow_str <- (
-      "block"|"break"|"case"|"continue"|"defer"|"do"|"elif"|"else"|"end"|"except"|"finally"|"for"|"if"|"raise"|"return"|
-      "try"|"when"|"while"|"yield"
-    )
-    operatorWord_str <- (
-      "and"|"as"|"cast"|"div"|"in"|"isnot"|"is"|"mod"|"notin"|"not"|"or"|"shl"|"shr"|"xor"
-    )
-    builtinType_str <- (
-      "int8"|"int16"|"int32"|"int64"|"uint8"|"uint16"|"uint32"|"uint64"|"float32"|"float64"|
-      "int"|"float"|"string"|"bool"|"byte"|"uint"|"seq"|"set"
-    )
 
     word <- >ident:
-      d.add (kind: sText, text: $1)
-
-    keyword        <- >keyword_str * &!(Alnum|'_'):
-      d.add (kind: sKeyword, text: $1)
-
-    controlFlow    <- >controlFlow_str * &!(Alnum|'_'):
-      d.add (kind: sControlFlow, text: $1)
-    
-    operatorWord   <- >operatorWord_str * &!(Alnum|'_'):
-      d.add (kind: sOperatorWord, text: $1)
+      let s = $1
+      let kind = case s
+      of "func", "proc", "template", "iterator", "converter", "macro", "method", 
+        "addr", "asm", "bind", "concept", "const", "discard", "distinct", "enum", "export", "from", 
+        "import", "include", "interface", "let", "mixin", "nil", "object", "of", "out", "ptr", 
+        "ref", "static", "tuple", "type", "using", "var", "true", "false", "off", "on", "low", "high", "lent":
+        sKeyword
+      of "block", "break", "case", "continue", "defer", "do", "elif", "else", "end", "except", 
+        "finally", "for", "if", "raise", "return", "try", "when", "while", "yield":
+        sControlFlow
+      of "and", "as", "cast", "div", "in", "isnot", "is", "mod", "notin", "not", "or", "shl", "shr", "xor":
+        sOperatorWord
+      of "int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "uint64", "float32", "float64", 
+        "int", "float", "string", "bool", "byte", "uint", "seq", "set":
+        sBuiltinType
+      else: sText
+      d.add (kind: kind, text: $1)
     
     operator       <- >+(Graph - (Alnum|'"'|'\''|'`')):
       d.add (kind: sOperator, text: $1)
-    
-    builtinType    <- >builtinType_str * &!(Alnum|'_'):
-      d.add (kind: sBuiltinType, text: $1)
     
     ttype          <- >(Upper * *(Alnum|'_')):
       d.add (kind: sType, text: $1)
@@ -120,7 +105,7 @@ proc parseNimCode*(code: string): seq[CodeSegment] =
     functionCall <- >ident * &'(':
       d.add (kind: sFunction, text: $1)
     
-    something <- string|number|todoComment|comment|keyword|controlFlow|operatorWord|builtinType|ttype|functionCall|word|operator
+    something <- string|number|todoComment|comment|ttype|functionCall|word|operator
 
     text <- >1:
       d.add (kind: sText, text: $1)
