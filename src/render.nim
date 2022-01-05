@@ -12,7 +12,7 @@ type
 
 {.push, checks: off.}
 
-proc drawGlyph(r: Image, g: Glyph, pos: IVec2, size: IVec2, color: ColorRGB) =
+func drawGlyph(r: Image, g: Glyph, pos: IVec2, size: IVec2, color: ColorRGB) =
   ## fast draw image
 
   # clip
@@ -51,7 +51,7 @@ proc render(gt: var GlyphTable, c: Rune) =
   else:
     gt.glyphs[c] = (width: img.width.int32, height: img.height.int32, data: img.data.mapit(it.a))
 
-proc clear*(gt: var GlyphTable) =
+func clear*(gt: var GlyphTable) =
   clear gt.glyphs
 
 
@@ -61,7 +61,14 @@ proc draw*(r: Image, text: seq[ColoredText], box: Rect, gt: var GlyphTable) =
     let color = cs.color
     for c in cs.text.runes:
       if c notin gt.glyphs: gt.render(c)
-      r.drawGlyph gt.glyphs[c], ivec2(x, y), ivec2(w, h), color
+      if not c.isWhiteSpace:
+        r.drawGlyph gt.glyphs[c], ivec2(x, y), ivec2(w, h), color
       let bx = gt.glyphs[c].width
       x += bx
       w -= bx
+
+
+proc width*(text: string, gt: var GlyphTable): int32 =
+  for c in text.runes:
+    if c notin gt.glyphs: gt.render(c)
+    result += gt.glyphs[c].width
