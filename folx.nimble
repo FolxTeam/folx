@@ -6,5 +6,5 @@ srcDir        = "src"
 bin           = @["folx"]
 
 requires "nim >= 1.4.8"
-requires "https://github.com/FolxTeam/plainwindy", "pixie"
+requires "https://github.com/FolxTeam/plainwindy", "https://github.com/FolxTeam/pixie"
 requires "npeg"
