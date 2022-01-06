@@ -1,45 +1,22 @@
 import tables, unicode
-import pixie
+import pixie, boxy
 import syntax_highlighting
 
 type
-  Glyph* = tuple[width, height: int32, data: seq[ColorRgbx]]
+  Key = tuple[c: Rune; fg, bg: ColorRgb]
 
   GlyphTable* = object
     font*: Font
-    glyphs: Table[tuple[c: Rune; fg, bg: ColorRgb], Glyph]
+    boxy*: Boxy
+    glyphs: Table[Key, int32]
 
 
-{.push, checks: off.}
+proc `$@`[T](i: T): string =
+  cast[string](cast[ptr array[T.sizeof, byte]](i.unsafeaddr)[].`@`)
 
-func drawGlyph(r: Image, g: Glyph, pos: IVec2, size: IVec2) =
-  ## fast draw image
 
-  # clip
-  let pos2 = ivec2(max(-pos.x, 0), max(-pos.y, 0))
-  let pos = pos + pos2
-  let size = ivec2(
-    size.x.min(g.width - pos2.x).min(r.width.int32 - pos.x),
-    size.y.min(g.height - pos2.y).min(r.height.int32 - pos.y)
-  )
-  if size.x <= 0 or size.y <= 0: return
-
-  # draw
-  for y in 0..<size.y:
-    var
-      idst = (pos.y + y) * r.width + pos.x
-      isrc = (pos2.y + y) * g.width + pos2.x
-    for _ in 0..<size.x:
-      r.data[idst] = g.data[isrc]
-      inc isrc
-      inc idst
-
-proc vertical_line*(r: Image; x, y, h: int32, color: ColorRgb) =
-  let x = x.min(r.width).max(0)
-  for i in countup(y.min(r.height).max(0) * r.width + x, (y + h).min(r.height).max(0) * r.width + x, r.width):
-    r.data[i] = rgbx(color.r, color.g, color.b, 255)
-
-{.pop.}
+proc vertical_line*(gt: GlyphTable; x, y, h: int32, color: ColorRgb) =
+  gt.boxy.drawRect rect(vec2(x.float32, y.float32), vec2(1, h.float32)), color.color
 
 
 proc render(c: Rune, font: Font; fg, bg: ColorRgb): Image =
@@ -53,28 +30,33 @@ proc render(c: Rune, font: Font; fg, bg: ColorRgb): Image =
 
 proc render(gt: var GlyphTable, c: Rune; fg, bg: ColorRgb) =
   let img = c.render(gt.font, fg, bg)
-  if img == nil:
-    gt.glyphs[(c, fg, bg)] = Glyph.default
+  if img == nil: 
+    gt.glyphs[(c, fg, bg)] = 0
   else:
-    gt.glyphs[(c, fg, bg)] = (width: img.width.int32, height: img.height.int32, data: img.data)
+    gt.glyphs[(c, fg, bg)] = img.width.int32
+    gt.boxy.addImage $(c, fg, bg), img
 
-func clear*(gt: var GlyphTable) =
+proc clear*(gt: var GlyphTable) =
   clear gt.glyphs
+  clearAtlas gt.boxy
 
 
-proc draw*(r: Image, text: seq[ColoredText], box: Rect, gt: var GlyphTable, bg: ColorRgb) =
-  var (x, y, w, h) = (box.x.round.int32, box.y.round.int32, box.w.round.int32, box.h.round.int32)
+proc draw*(text: seq[ColoredText], box: Rect, gt: var GlyphTable, bg: ColorRgb) =
+  var (x, y, w, _) = (box.x.round.int32, box.y.round.int32, box.w.round.int32, box.h.round.int32)
   for cs in text:
     let color = cs.color
+    
     for c in cs.text.runes:
-      let glyph =
-        try: gt.glyphs[(c, color, bg)].addr
+      let bx =
+        try: gt.glyphs[(c, color, bg)]
         except KeyError:
           gt.render(c, color, bg)
-          gt.glyphs[(c, color, bg)].addr
-      if not c.isWhiteSpace:
-        r.drawGlyph glyph[], ivec2(x, y), ivec2(w, h)
-      let bx = glyph[].width
+          gt.glyphs[(c, color, bg)]
+
+      
+      if bx != 0 and not c.isWhiteSpace:
+        gt.boxy.drawImage $(c, color, bg), vec2(x.float32, y.float32)
+      
       x += bx
       w -= bx
       if w <= 0: return
@@ -82,5 +64,10 @@ proc draw*(r: Image, text: seq[ColoredText], box: Rect, gt: var GlyphTable, bg: 
 
 proc width*(text: string, gt: var GlyphTable): int32 =
   for c in text.runes:
-    if (c, rgb(0, 0, 0), rgb(0, 0, 0)) notin gt.glyphs: gt.render(c, rgb(0, 0, 0), rgb(0, 0, 0))
-    result += gt.glyphs[(c, rgb(0, 0, 0), rgb(0, 0, 0))].width
+    let w =
+      try: gt.glyphs[(c, rgb(0, 0, 0), rgb(0, 0, 0))]
+      except KeyError:
+        gt.render(c, rgb(0, 0, 0), rgb(0, 0, 0))
+        gt.glyphs[(c, rgb(0, 0, 0), rgb(0, 0, 0))]
+    
+    result += w

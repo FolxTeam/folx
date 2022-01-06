@@ -1,5 +1,5 @@
 import os, times, math, sequtils, unicode, strutils
-import plainwindy, pixie
+import windy, pixie, opengl, boxy
 import render, syntax_highlighting
 
 proc bound[T](x: T, s: Slice[T]): T = x.max(s.a).min(s.b)
@@ -35,8 +35,6 @@ proc indentation(text: seq[string]): seq[tuple[len: seq[int], has_graph: bool]] 
 
 
 proc line_numbers(
-  r: Context,
-  image: Image,
   box: Rect,
   pos: float32,
   gt: var GlyphTable,
@@ -50,12 +48,10 @@ proc line_numbers(
   for i in (pos.int..pos.ceil.int+size).bound(text.low..text.high):
     let s = $(i+1)
     let w = float32 s.width(gt)
-    image.draw @[(sLineNumber.color, s)], rect(vec2(box.x + box.w - w, y), vec2(w, box.h - y)), gt, bg
+    draw @[(sLineNumber.color, s)], rect(vec2(box.x + box.w - w, y), vec2(w, box.h - y)), gt, bg
     y += round(gt.font.size * 1.27)
 
 proc text_area(
-  r: Context,
-  image: Image,
   box: Rect,
   pos: float32,
   gt: var GlyphTable,
@@ -73,16 +69,16 @@ proc text_area(
   var y = box.y - dy * (pos mod 1)
 
   for i in (pos.int..pos.ceil.int+size).bound(text.low..text.high):
-    image.draw text[i], rect(vec2(box.x, y), vec2(box.x + box.w, y + box.h)), gt, bg
+    draw text[i], rect(vec2(box.x, y), vec2(box.x + box.w, y + box.h)), gt, bg
 
     var x = box.x.round.int
     for i, l in indentation[i].len:
-      image.vertical_line x.int32, y.int32, dy.int32, rgb(64, 64, 64)
+      gt.vertical_line x.int32, y.int32, dy.int32, rgb(64, 64, 64)
       x += l * space_w
 
     y += dy
 
-proc scrollbar(r: Context, box: Rect, pos: float32, size: int, total: int) =
+proc scrollbar(r: Boxy, box: Rect, pos: float32, size: int, total: int) =
   if total == 0: return
   let
     a = pos / total.float32
@@ -92,27 +88,28 @@ proc scrollbar(r: Context, box: Rect, pos: float32, size: int, total: int) =
   box.xy = vec2(box.x, box.y + (box.h * a))
   box.wh = vec2(box.w, box.h * (b - a))
 
-  r.fillStyle = rgba(48, 48, 48, 255)
-  r.fillRect box
+  r.drawRect box, rgba(48, 48, 48, 255).color
 
 
 let window = newWindow("folx", ivec2(1280, 900), visible=false)
 
+window.makeContextCurrent()
+loadExtensions()
+
 let font = readFont"resources/FiraCode-Regular.ttf"
 font.size = 11
 font.paint.color = color(1, 1, 1, 1)
-var gt = GlyphTable(font: font)
-
-let text = "src/folx.nim".readFile
-let text_indentation = text.split("\n").indentation
-let text_colored = text.parseNimCode.lines.map(color)
-
 
 var
   pos = 0'f32
   visual_pos = pos
-  image = newImage(1280, 720)
-  r = image.newContext
+  r = newBoxy()
+
+var gt = GlyphTable(font: font, boxy: r)
+
+let text = "src/folx.nim".readFile
+let text_indentation = text.split("\n").indentation
+let text_colored = text.parseNimCode.lines.map(color)
 
 
 proc animate(dt: float32): bool =
@@ -135,18 +132,17 @@ proc display =
 
     line_number_width = float32 ($total).width(gt)
 
-  image.fill rgbx(32, 32, 32, 255)
+  r.beginFrame window.size
+  r.drawRect rect(vec2(0, 0), window.size.vec2), color(0.13, 0.13, 0.13, 1)
 
-  r.line_numbers(
-    image = image,
+  line_numbers(
     box = rect(vec2(10, 0), vec2(line_number_width, window.size.vec2.y)),
     pos = visual_pos,
     gt = gt,
     bg = rgb(32, 32, 32),
     text = text_colored,
   )
-  r.text_area(
-    image = image,
+  text_area(
     box = rect(vec2(line_number_width + 30, 0), window.size.vec2 - vec2(10, 0)),
     pos = visual_pos,
     gt = gt,
@@ -154,14 +150,16 @@ proc display =
     text = text_colored,
     indentation = text_indentation,
   )
-  r.scrollbar(
+  scrollbar(
+    r = r,
     box = rect(vec2(window.size.vec2.x - 10, 0), vec2(10, window.size.vec2.y)),
     pos = visual_pos,
     size = size,
     total = total + size - 1,
   )
+  r.endFrame
 
-  window.draw image
+  window.swapBuffers
 
 
 var displayRequest = false
@@ -180,9 +178,6 @@ window.onScroll = proc =
     pos = (pos - window.scrollDelta.y * 3).max(0).min(text_colored.high.float32)
 
 window.onResize = proc =
-  if window.size.x * window.size.y == 0: return
-  image = newImage(window.size.x, window.size.y)
-  r = image.newContext
   display()
 
 
