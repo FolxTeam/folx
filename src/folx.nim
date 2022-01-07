@@ -92,11 +92,7 @@ proc scrollbar(r: Boxy, box: Rect, pos: float32, size: int, total: int) =
 
 
 # todo: add window size to config, rename configuration to something better
-let configuration = Config(
-  file: "src/folx.nim",
-  font: "resources/FiraCode-Regular.ttf",
-  fontSize: 11,
-)
+let configuration = getConfig()
 
 let window = newWindow("folx", ivec2(1280, 900), visible=false)
 
