@@ -90,19 +90,17 @@ proc scrollbar(r: Boxy, box: Rect, pos: float32, size: int, total: int) =
 
   r.drawRect box, rgba(48, 48, 48, 255).color
 
+let init_config = getConfig()
 
-# todo: add window size to config, rename configuration to something better
-let configuration = getConfig()
-
-let window = newWindow("folx", ivec2(1280, 900), visible=false)
+let window = newWindow("folx", ivec2(init_config.width.int32, init_config.height.int32), visible=false)
 
 window.makeContextCurrent()
 loadExtensions()
 
-window.title = configuration.file & " - folx"
+window.title = init_config.file & " - folx"
 
-let font = readFont(configuration.font)
-font.size = configuration.fontSize
+let font = readFont(init_config.font)
+font.size = init_config.fontSize
 font.paint.color = color(1, 1, 1, 1)
 
 var
@@ -112,7 +110,7 @@ var
 
 var gt = GlyphTable(font: font, boxy: r)
 
-let text = configuration.file.readFile
+let text = init_config.file.readFile
 let text_indentation = text.split("\n").indentation
 let text_colored = text.parseNimCode.lines.map(color)
 

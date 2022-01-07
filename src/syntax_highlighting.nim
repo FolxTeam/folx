@@ -1,5 +1,6 @@
 import strutils, sequtils
 import pixie, npeg
+import config
 
 type
   CodeSegmentKind* = enum
@@ -33,17 +34,20 @@ type
 
 
 func color*(sk: CodeSegmentKind): ColorRGB =
+
+  let colorTheme = getColorTheme()
+
   case sk
-  of sKeyword, sOperatorWord, sBuiltinType: rgb(86, 156, 214)
-  of sControlFlow: rgb(197, 134, 192)
-  of sType: rgb(78, 201, 176)
-  of sStringLit: rgb(206, 145, 120)
-  of sNumberLit: rgb(181, 206, 168)
-  of sFunction: rgb(220, 220, 170)
-  of sComment: rgb(106, 153, 85)
-  of sTodoComment: rgb(255, 140, 0)
-  of sLineNumber: rgb(133, 133, 133)
-  else: rgb(212, 212, 212)
+  of sKeyword, sOperatorWord, sBuiltinType: colorTheme.sKeyword
+  of sControlFlow: colorTheme.sControlFlow
+  of sType: colorTheme.sType
+  of sStringLit: colorTheme.sStringLit
+  of sNumberLit: colorTheme.sNumberLit
+  of sFunction: colorTheme.sFunction
+  of sComment: colorTheme.sComment
+  of sTodoComment: colorTheme.sTodoComment
+  of sLineNumber: colorTheme.sLineNumber
+  else: colorTheme.sElse
 
 func lines*(scs: seq[CodeSegment]): seq[seq[CodeSegment]] =
   result = @[newSeq[CodeSegment]()]
