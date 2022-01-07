@@ -1,5 +1,4 @@
 
-
 type
   Config* = object
     file*: string

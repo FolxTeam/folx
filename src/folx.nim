@@ -1,7 +1,6 @@
 import os, times, math, sequtils, unicode, strutils
 import windy, pixie, opengl, boxy
-import render, syntax_highlighting
-import config
+import render, syntax_highlighting, config
 
 proc bound[T](x: T, s: Slice[T]): T = x.max(s.a).min(s.b)
 proc bound[T](x, s: Slice[T]): Slice[T] = Slice[T](a: x.a.bound(s), b: x.b.bound(s))
@@ -91,7 +90,8 @@ proc scrollbar(r: Boxy, box: Rect, pos: float32, size: int, total: int) =
 
   r.drawRect box, rgba(48, 48, 48, 255).color
 
-#TODO: add window size to config, rename configuration to something better
+
+# todo: add window size to config, rename configuration to something better
 let configuration = Config(
   file: "src/folx.nim",
   font: "resources/FiraCode-Regular.ttf",
