@@ -1,6 +1,6 @@
 import os, times, math, sequtils, unicode, strutils
 import windy, pixie, opengl, boxy
-import render, syntax_highlighting
+import render, syntax_highlighting, config
 
 proc bound[T](x: T, s: Slice[T]): T = x.max(s.a).min(s.b)
 proc bound[T](x, s: Slice[T]): Slice[T] = Slice[T](a: x.a.bound(s), b: x.b.bound(s))
@@ -91,13 +91,22 @@ proc scrollbar(r: Boxy, box: Rect, pos: float32, size: int, total: int) =
   r.drawRect box, rgba(48, 48, 48, 255).color
 
 
+# todo: add window size to config, rename configuration to something better
+let configuration = Config(
+  file: "src/folx.nim",
+  font: "resources/FiraCode-Regular.ttf",
+  fontSize: 11,
+)
+
 let window = newWindow("folx", ivec2(1280, 900), visible=false)
 
 window.makeContextCurrent()
 loadExtensions()
 
-let font = readFont"resources/FiraCode-Regular.ttf"
-font.size = 11
+window.title = configuration.file & " - folx"
+
+let font = readFont(configuration.font)
+font.size = configuration.fontSize
 font.paint.color = color(1, 1, 1, 1)
 
 var
@@ -107,7 +116,7 @@ var
 
 var gt = GlyphTable(font: font, boxy: r)
 
-let text = "src/folx.nim".readFile
+let text = configuration.file.readFile
 let text_indentation = text.split("\n").indentation
 let text_colored = text.parseNimCode.lines.map(color)
 
