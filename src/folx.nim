@@ -1,6 +1,6 @@
 import os, times, math, sequtils, unicode, strutils
 import pixwindy, pixie
-import render, syntax_highlighting, config
+import render, syntax_highlighting, configuration
 
 type
   Indentation = seq[tuple[len: seq[int], has_graph: bool]]
@@ -100,18 +100,18 @@ proc scrollbar(r: Context, box: Rect, pos: float32, size: int, total: int) =
   r.fillStyle = rgba(48, 48, 48, 255)
   r.fillRect box
 
-let init_config = getConfig()
+let config = readConfig()
 
-let window = newWindow("folx", ivec2(init_config.width.int32, init_config.height.int32), visible=false)
+let window = newWindow("folx", config.window.size, visible=false)
 
-window.title = init_config.file & " - folx"
+window.title = config.file & " - folx"
 
-let font = readFont(init_config.font)
-font.size = init_config.fontSize
+let font = readFont(config.font)
+font.size = config.fontSize
 font.paint.color = color(1, 1, 1, 1)
 var gt = GlyphTable(font: font)
 
-var text = init_config.file.readFile
+var text = config.file.readFile
 let text_indentation = text.splitLines.indentation
 let colors = text.parseNimCode.map(color)
 let lines = text.splitLines

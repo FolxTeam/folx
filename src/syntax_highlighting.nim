@@ -1,6 +1,6 @@
 import strutils, sequtils
 import pixie, npeg
-import config
+import configuration
 
 type
   CodeSegmentKind* = enum
@@ -33,10 +33,7 @@ type
     startPos: int
 
 
-func color*(sk: CodeSegmentKind): ColorRGB =
-
-  let colorTheme = getColorTheme()
-
+proc color*(sk: CodeSegmentKind): ColorRGB =
   case sk
   of sKeyword, sOperatorWord, sBuiltinType: colorTheme.sKeyword
   of sControlFlow: colorTheme.sControlFlow
@@ -49,7 +46,7 @@ func color*(sk: CodeSegmentKind): ColorRGB =
   of sLineNumber: colorTheme.sLineNumber
   else: colorTheme.sElse
 
-func color*(scs: seq[CodeSegment]): seq[ColoredPos] =
+proc color*(scs: seq[CodeSegment]): seq[ColoredPos] =
   scs.mapit((color: it.kind.color, startPos: it.startPos))
 
 proc parseNimCode*(code: string): seq[seq[CodeSegment]] =

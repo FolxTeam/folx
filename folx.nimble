@@ -8,3 +8,4 @@ bin           = @["folx"]
 requires "nim >= 1.4.8"
 requires "https://github.com/FolxTeam/pixwindy", "pixie"
 requires "npeg"
+requires "jsony"

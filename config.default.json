@@ -1,7 +1,11 @@
 {
-    "height": 900,
-    "width": 1420,
-    "file": "src/folx.nim",
-    "font_file": "resources/FiraCode-Regular.ttf",
-    "font_size": 11
+  "font": "resources/FiraCode-Regular.ttf",
+  "fontSize": 11.0,
+  "window": {
+    "size": [
+      1280,
+      720
+    ]
+  },
+  "file": "src/folx.nim"
 }
