@@ -25,6 +25,7 @@ type
     sControlFlow*: ColorRGB
     sType*: ColorRGB
     sStringLit*: ColorRGB
+    sStringLitEscape*: ColorRGB
     sNumberLit*: ColorRGB
     sFunction*: ColorRGB
     sComment*: ColorRGB
@@ -55,6 +56,7 @@ let colorTheme* = ColorTheme(
   sControlFlow: rgb(197, 134, 192),
   sType: rgb(78, 201, 176),
   sStringLit: rgb(206, 145, 120),
+  sStringLitEscape: rgb(242, 225, 162),
   sNumberLit: rgb(181, 206, 168),
   sFunction: rgb(220, 220, 170),
   sComment: rgb(106, 153, 85),

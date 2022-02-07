@@ -1,5 +1,5 @@
-import strutils, sequtils
-import pixie, npeg
+import strutils, sequtils, unicode
+import pixie, npeg, npeg/lib/utf8
 import configuration
 
 type
@@ -16,9 +16,11 @@ type
     sType
     sBuiltinType
     sStringLit
+    sCharLit
     sNumberLit
 
     sStringLitEscape
+    sCharLitEscape
 
     sTodoComment
 
@@ -35,15 +37,36 @@ type
 
 proc color*(sk: CodeSegmentKind): ColorRGB =
   case sk
-  of sKeyword, sOperatorWord, sBuiltinType: colorTheme.sKeyword
-  of sControlFlow: colorTheme.sControlFlow
-  of sType: colorTheme.sType
-  of sStringLit: colorTheme.sStringLit
-  of sNumberLit: colorTheme.sNumberLit
-  of sFunction: colorTheme.sFunction
-  of sComment: colorTheme.sComment
-  of sTodoComment: colorTheme.sTodoComment
-  of sLineNumber: colorTheme.sLineNumber
+  of sKeyword, sOperatorWord, sBuiltinType:
+    colorTheme.sKeyword
+
+  of sControlFlow:
+    colorTheme.sControlFlow
+  
+  of sType:
+    colorTheme.sType
+  
+  of sStringLit, sCharLit:
+    colorTheme.sStringLit
+  
+  of sStringLitEscape, sCharLitEscape:
+    colorTheme.sStringLitEscape
+  
+  of sNumberLit:
+    colorTheme.sNumberLit
+  
+  of sFunction:
+    colorTheme.sFunction
+  
+  of sComment:
+    colorTheme.sComment
+  
+  of sTodoComment:
+    colorTheme.sTodoComment
+  
+  of sLineNumber:
+    colorTheme.sLineNumber
+  
   else: colorTheme.sElse
 
 proc color*(scs: seq[CodeSegment]): seq[ColoredPos] =
@@ -51,8 +74,16 @@ proc color*(scs: seq[CodeSegment]): seq[ColoredPos] =
 
 proc parseNimCode*(code: string): seq[seq[CodeSegment]] =
   var i = 0
+
+  proc add(d: var seq[CodeSegment], k: CodeSegmentKind) =
+    if d.len == 0 or d[^1].kind != k:
+      system.add d, (k, i)
+
+  template add(k: CodeSegmentKind) =
+    d[^1].add k
+
   let parser = peg("segments", d: seq[seq[CodeSegment]]):
-    ident <- Alpha * *(Alnum|'_')
+    ident <- utf8.alpha * *(utf8.alpha|Digit|'_')
 
     word <- >ident:
       let s = $1
@@ -68,60 +99,76 @@ proc parseNimCode*(code: string): seq[seq[CodeSegment]] =
       of "and", "as", "cast", "div", "in", "isnot", "is", "mod", "notin", "not", "or", "shl", "shr", "xor":
         sOperatorWord
       of "int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "uint64", "float32", "float64", 
-        "int", "float", "string", "bool", "byte", "uint", "seq", "set":
+        "int", "float", "string", "bool", "byte", "uint", "seq", "set", "char", "void", "auto", "any":
         sBuiltinType
       else: sText
-      d[^1].add (kind: kind, startPos: i)
+      add kind
       inc i, len s
     
     operator       <- >+(Graph - (Alnum|'"'|'\''|'`')):
-      d[^1].add (kind: sOperator, startPos: i)
+      add sOperator
       inc i, len $1
     
-    ttype          <- >(Upper * *(Alnum|'_')):
-      d[^1].add (kind: sType, startPos: i)
+    ttype          <- >(utf8.upper * *(utf8.alpha|Digit|'_')):
+      add sType
       inc i, len $1
     
     todoComment    <- >(+'#' * *Space * (i"todo" | i"to do") * &!(Alnum|'_') * *(1 - '\n')):
-      d[^1].add (kind: sTodoComment, startPos: i)
+      add sTodoComment
+      inc i, len $1
 
     comment        <- >('#' * *(1 - '\n')):
-      d[^1].add (kind: sComment, startPos: i)
+      add sComment
       inc i, len $1
     
+    bdigit        <- {'0'..'1'}
+    odigit        <- {'0'..'7'}
+    binNumber     <- bdigit * *(bdigit|'_') * ?('.' * bdigit * *(bdigit|'_')) * ?('\'' * ident)
+    octNumber     <- odigit * *(odigit|'_') * ?('.' * odigit * *(odigit|'_')) * ?('\'' * ident)
     hexNumber     <- Xdigit * *(Xdigit|'_') * ?('.' * Xdigit * *(Xdigit|'_')) * ?('\'' * ident)
     classicNumber <- Digit * *(Digit|'_') * ?('.' * Digit * *(Digit|'_')) * ?('\'' * ident)
-    number        <- >(("0x" * hexNumber) | classicNumber): # todo: bin and oct number
+    number        <- >(("0b" * binNumber) | ("0o" * octNumber) | ("0x" * hexNumber) | classicNumber):
       d[^1].add (kind: sNumberLit, startPos: i)
       inc i, len $1
     
     unicodeEscape <- 'u' * Xdigit[4]
-    escape        <- '\\' * ({ '{', '"', '|', '\\', 'b', 'f', 'n', 'r', 't' } | unicodeEscape)
-    stringBody    <- ?escape * *( +( {'\x20'..'\xff'} - {'"'} - {'\\'}) * *escape)
-    string        <- >('"' * stringBody * '"'):
-      let s = $1
-      d[^1].add (kind: sStringLit, startPos: i)
-      inc i, len s
-      # let (c, n) = block:
-      #   var c, n: int
-      #   for i, c2 in s:
-      #     if c2 == '\n':
-      #       inc c
-      #       n = i
-      #   (c, n)
-      # if c != 0:
-      #   d.add (kind: sStringLit, startPos: 0).repeat(c)
-      #   inc i, s.high - n
+    xEscape       <- 'x' * Xdigit[2]
+    escape        <- '\\' * ({ '{', '"', '\'', '|', '\\', 'b', 'f', 'n', 'r', 't' } | unicodeEscape | xEscape)
+
+    stringEscape  <- >escape:
+      add sStringLitEscape
+      inc i, len $1
+    stringChar    <- >(utf8.any - '"' - '\\' - {0..31}):
+      add sStringLit
+      inc i, len $1
+    stringStart   <- '"':
+      add sStringLit
+      inc i
+    string        <- stringStart * *(stringEscape|stringChar) * '"':
+      add sStringLit
+      inc i
+    
+    charEscape  <- >escape:
+      add sCharLitEscape
+      inc i, len $1
+    charChar    <- >(utf8.any - '\'' - '\\' - {0..31}):
+      add sCharLit
+      inc i, len $1
+    charStart   <- '\'':
+      add sCharLit
+      inc i
+    charLit     <- charStart * *(charEscape|charChar) * '\'':
+      add sCharLit
+      inc i
     
     functionCall <- >ident * &'(':
-      d[^1].add (kind: sFunction, startPos: i)
+      add sFunction
       inc i, len $1
     
-    something <- string|number|todoComment|comment|ttype|functionCall|word|operator
+    something <- string|charLit|number|todoComment|comment|ttype|functionCall|word|operator
 
     text <- 1:
-      if d[^1].len == 0 or d[^1][^1].kind != sText:
-        d[^1].add (kind: sText, startPos: i)
+      add sText
       inc i
     
     newline <- ?'\r' * '\n':

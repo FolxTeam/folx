@@ -129,7 +129,7 @@ proc animate(dt: float32): bool =
   if pos != visual_pos:
     let pvp = (visual_pos * font.size).round.int32
 
-    let d = (abs(pos - visual_pos) * (0.000005 / dt)).max(0.1).min(abs(pos - visual_pos))
+    let d = (abs(pos - visual_pos) * (0.00001 / dt)).max(0.1).min(abs(pos - visual_pos))
     if pos > visual_pos: visual_pos += d
     else:                visual_pos -= d
 
