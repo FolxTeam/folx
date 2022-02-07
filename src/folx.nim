@@ -100,24 +100,18 @@ proc scrollbar(r: Context, box: Rect, pos: float32, size: int, total: int) =
   r.fillStyle = rgba(48, 48, 48, 255)
   r.fillRect box
 
+let init_config = getConfig()
 
-# todo: add window size to config, rename configuration to something better
-let configuration = Config(
-  file: "src/folx.nim",
-  font: "resources/FiraCode-Regular.ttf",
-  fontSize: 11,
-)
+let window = newWindow("folx", ivec2(init_config.width.int32, init_config.height.int32), visible=false)
 
-let window = newWindow("folx", ivec2(1280, 900), visible=false)
+window.title = init_config.file & " - folx"
 
-window.title = configuration.file & " - folx"
-
-let font = readFont(configuration.font)
-font.size = configuration.fontSize
+let font = readFont(init_config.font)
+font.size = init_config.fontSize
 font.paint.color = color(1, 1, 1, 1)
 var gt = GlyphTable(font: font)
 
-var text = configuration.file.readFile
+var text = init_config.file.readFile
 let text_indentation = text.splitLines.indentation
 let colors = text.parseNimCode.map(color)
 let lines = text.splitLines
