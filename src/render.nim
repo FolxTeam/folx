@@ -36,7 +36,7 @@ func draw*(r: Image, g: Image, pos: IVec2, size: IVec2) =
 proc vertical_line*(r: Image; x, y, h: int32, color: ColorRgb) =
   ## draw vertical line (fast)
   let x = x.min(r.width).max(0)
-  for i in countup(y.min(r.height).max(0) * r.width + x, (y + h).min(r.height).max(0) * r.width + x, r.width):
+  for i in countup(y.min(r.height - 1).max(0) * r.width + x, (y + h).min(r.height - 1).max(0) * r.width + x, r.width):
     r.data[i] = rgbx(color.r, color.g, color.b, 255)
 
 {.pop.}
@@ -64,25 +64,41 @@ func clear*(gt: var GlyphTable) =
   clear gt.glyphs
 
 
-proc draw*(r: Image, text: seq[ColoredText], box: Rect, gt: var GlyphTable, bg: ColorRgb) =
+proc draw*(r: Image, text: string, colors: seq[ColoredPos], box: Rect, gt: var GlyphTable, bg: ColorRgb) =
   ## draw colored text
   var (x, y, w, h) = (box.x.round.int32, box.y.round.int32, box.w.round.int32, box.h.round.int32)
-  for cs in text:
-    let color = cs.color
-    for c in cs.text.runes:
-      let glyph =
-        try: gt.glyphs[(c, color, bg)]
+  var i = 0
+  var ic = -1
+  var color: ColorRgb
+  for c in text.runes:
+    defer: inc i, c.size
+    if colors.len > ic + 1 and colors[ic + 1].startPos == i:
+      inc ic
+      color = colors[ic].color
+    
+    var glyph =
+      try: gt.glyphs[(c, color, bg)]
+      except KeyError:
+        gt.render(c, color, bg)
+        gt.glyphs[(c, color, bg)]
+    
+    if glyph == nil:
+      glyph = 
+        try: gt.glyphs[(" ".runeAt(0), color, bg)]
         except KeyError:
-          gt.render(c, color, bg)
-          gt.glyphs[(c, color, bg)]
+          gt.render(" ".runeAt(0), color, bg)
+          gt.glyphs[(" ".runeAt(0), color, bg)]
+    
+    if glyph == nil:
+      continue
 
-      if not c.isWhiteSpace:
-        r.draw glyph, ivec2(x, y), ivec2(w, h)
+    if not c.isWhiteSpace:
+      r.draw glyph, ivec2(x, y), ivec2(w, h)
 
-      let bx = glyph.width.int32
-      x += bx
-      w -= bx
-      if w <= 0: return
+    let bx = glyph.width.int32
+    x += bx
+    w -= bx
+    if w <= 0: return
 
 
 proc width*(text: string, gt: var GlyphTable): int32 =

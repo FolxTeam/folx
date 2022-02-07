@@ -25,11 +25,11 @@ type
   
   CodeSegment* = tuple
     kind: CodeSegmentKind
-    text: string
+    startPos: int
 
-  ColoredText* = tuple
+  ColoredPos* = tuple
     color: ColorRgb
-    text: string
+    startPos: int
 
 
 func color*(sk: CodeSegmentKind): ColorRGB =
@@ -45,19 +45,12 @@ func color*(sk: CodeSegmentKind): ColorRGB =
   of sLineNumber: rgb(133, 133, 133)
   else: rgb(212, 212, 212)
 
-func lines*(scs: seq[CodeSegment]): seq[seq[CodeSegment]] =
-  result = @[newSeq[CodeSegment]()]
-  for x in scs:
-    let s = x.text.split("\n")
-    result[^1].add (kind: x.kind, text: s[0])
-    if s.len > 1:
-      result.add s[1..^1].mapit(@[(kind: x.kind, text: it)])
+func color*(scs: seq[CodeSegment]): seq[ColoredPos] =
+  scs.mapit((color: it.kind.color, startPos: it.startPos))
 
-func color*(scs: seq[CodeSegment]): seq[ColoredText] =
-  scs.mapit((color: it.kind.color, text: it.text))
-
-proc parseNimCode*(code: string): seq[CodeSegment] =
-  const parser = peg("segments", d: seq[CodeSegment]):
+proc parseNimCode*(code: string): seq[seq[CodeSegment]] =
+  var i = 0
+  let parser = peg("segments", d: seq[seq[CodeSegment]]):
     ident <- Alpha * *(Alnum|'_')
 
     word <- >ident:
@@ -77,40 +70,67 @@ proc parseNimCode*(code: string): seq[CodeSegment] =
         "int", "float", "string", "bool", "byte", "uint", "seq", "set":
         sBuiltinType
       else: sText
-      d.add (kind: kind, text: $1)
+      d[^1].add (kind: kind, startPos: i)
+      inc i, len s
     
     operator       <- >+(Graph - (Alnum|'"'|'\''|'`')):
-      d.add (kind: sOperator, text: $1)
+      d[^1].add (kind: sOperator, startPos: i)
+      inc i, len $1
     
     ttype          <- >(Upper * *(Alnum|'_')):
-      d.add (kind: sType, text: $1)
+      d[^1].add (kind: sType, startPos: i)
+      inc i, len $1
     
     todoComment    <- >(+'#' * *Space * (i"todo" | i"to do") * &!(Alnum|'_') * *(1 - '\n')):
-      d.add (kind: sTodoComment, text: $1)
+      d[^1].add (kind: sTodoComment, startPos: i)
 
     comment        <- >('#' * *(1 - '\n')):
-      d.add (kind: sComment, text: $1)
+      d[^1].add (kind: sComment, startPos: i)
+      inc i, len $1
     
     hexNumber     <- Xdigit * *(Xdigit|'_') * ?('.' * Xdigit * *(Xdigit|'_')) * ?('\'' * ident)
     classicNumber <- Digit * *(Digit|'_') * ?('.' * Digit * *(Digit|'_')) * ?('\'' * ident)
     number        <- >(("0x" * hexNumber) | classicNumber): # todo: bin and oct number
-      d.add (kind: sNumberLit, text: $1)
+      d[^1].add (kind: sNumberLit, startPos: i)
+      inc i, len $1
     
     unicodeEscape <- 'u' * Xdigit[4]
     escape        <- '\\' * ({ '{', '"', '|', '\\', 'b', 'f', 'n', 'r', 't' } | unicodeEscape)
     stringBody    <- ?escape * *( +( {'\x20'..'\xff'} - {'"'} - {'\\'}) * *escape)
     string        <- >('"' * stringBody * '"'):
-      d.add (kind: sStringLit, text: $1)
+      let s = $1
+      d[^1].add (kind: sStringLit, startPos: i)
+      inc i, len s
+      # let (c, n) = block:
+      #   var c, n: int
+      #   for i, c2 in s:
+      #     if c2 == '\n':
+      #       inc c
+      #       n = i
+      #   (c, n)
+      # if c != 0:
+      #   d.add (kind: sStringLit, startPos: 0).repeat(c)
+      #   inc i, s.high - n
     
     functionCall <- >ident * &'(':
-      d.add (kind: sFunction, text: $1)
+      d[^1].add (kind: sFunction, startPos: i)
+      inc i, len $1
     
     something <- string|number|todoComment|comment|ttype|functionCall|word|operator
 
-    text <- >1:
-      d.add (kind: sText, text: $1)
+    text <- 1:
+      if d[^1].len == 0 or d[^1][^1].kind != sText:
+        d[^1].add (kind: sText, startPos: i)
+      inc i
+    
+    newline <- ?'\r' * '\n':
+      d.add @[]
+      i = 0
+    
+    init <- 0:
+      d.add @[]
 
-    segment  <- something|text
-    segments <- *segment
+    segment  <- newline|something|text
+    segments <- init * *segment
     
   doassert parser.match(code, result).ok
