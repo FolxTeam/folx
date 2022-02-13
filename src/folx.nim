@@ -38,6 +38,25 @@ proc indentation(text: seq[string]): Indentation =
     elif result[i].len.len > lgl: result[i].len = result[i].len[0..<lgl]
 
 
+proc status_bar(
+  r: Context,
+  image: Image,
+  box: Rect,
+  pos: float32,
+  gt: var GlyphTable,
+  bg: ColorRgb,
+  text: string,
+  ) =
+
+  var box = box
+
+  r.fillStyle = bg
+  r.fillRect box
+
+  var y = round(box.y - gt.font.size * 1.27 * (pos mod 1))
+  image.draw text, @[(sText.color, 0)], box, gt, bg
+  y += round(gt.font.size * 1.27)
+
 proc line_numbers(
   r: Context,
   image: Image,
@@ -82,12 +101,12 @@ proc text_area(
 
     var x = box.x.round.int
     for i, l in indentation[i].len:
-      image.vertical_line x.int32, y.int32, dy.int32, rgb(64, 64, 64)
+      image.vertical_line x.int32, y.int32, dy.int32, configuration.colorTheme.verticalline
       x += l * space_w
 
     y += dy
 
-proc scrollbar(r: Context, box: Rect, pos: float32, size: int, total: int) =
+proc scroll_bar(r: Context, box: Rect, pos: float32, size: int, total: int) =
   if total == 0: return
   let
     a = pos / total.float32
@@ -97,7 +116,7 @@ proc scrollbar(r: Context, box: Rect, pos: float32, size: int, total: int) =
   box.xy = vec2(box.x, box.y + (box.h * a))
   box.wh = vec2(box.w, box.h * (b - a))
 
-  r.fillStyle = rgba(48, 48, 48, 255)
+  r.fillStyle = configuration.colorTheme.scrollbar
   r.fillRect box
 
 let config = readConfig()
@@ -109,7 +128,8 @@ window.title = config.file & " - folx"
 let font = readFont(config.font)
 font.size = config.fontSize
 font.paint.color = color(1, 1, 1, 1)
-var gt = GlyphTable(font: font)
+var editor_gt = GlyphTable(font: font)
+var interface_gt = GlyphTable(font: font)
 
 var text = config.file.readFile
 let text_indentation = text.splitLines.indentation
@@ -143,33 +163,41 @@ proc display =
     size = (window.size.y.float32 / font.size).ceil.int
     total = lines.len
 
-    line_number_width = float32 ($total).width(gt)
+    line_number_width = float32 ($total).width(editor_gt)
 
-  image.fill rgbx(32, 32, 32, 255)
+  image.fill configuration.colorTheme.textarea
 
   r.line_numbers(
     image = image,
     box = rect(vec2(10, 0), vec2(line_number_width, window.size.vec2.y)),
     pos = visual_pos,
-    gt = gt,
-    bg = rgb(32, 32, 32),
+    gt = editor_gt,
+    bg = configuration.colorTheme.textarea,
     text = lines,
   )
   r.text_area(
     image = image,
-    box = rect(vec2(line_number_width + 30, 0), window.size.vec2 - vec2(10, 0)),
+    box = rect(vec2(line_number_width + 30, 0), window.size.vec2 - vec2(10, 20)),
     pos = visual_pos,
-    gt = gt,
-    bg = rgb(32, 32, 32),
+    gt = editor_gt,
+    bg = configuration.colorTheme.textarea,
     text = lines,
     colors = colors,
     indentation = text_indentation,
   )
-  r.scrollbar(
-    box = rect(vec2(window.size.vec2.x - 10, 0), vec2(10, window.size.vec2.y)),
+  r.scroll_bar(
+    box = rect(vec2(window.size.vec2.x - 10, 0), vec2(10, window.size.vec2.y-20)),
     pos = visual_pos,
     size = size,
     total = total + size - 1,
+  )
+  r.status_bar(
+    image = image,
+    box = rect(vec2(0, window.size.vec2.y - 20), vec2(window.size.vec2.x, 20)),
+    pos = visual_pos,
+    gt = interface_gt,
+    bg = configuration.colorTheme.sKeyword,
+    text = "visual_pos: " & $visual_pos,
   )
 
   window.draw image
@@ -185,7 +213,7 @@ window.onScroll = proc =
   if window.scrollDelta.y == 0: return
   if window.buttonDown[KeyLeftControl] or window.buttonDown[KeyRightControl]:
     font.size = (font.size + window.scrollDelta.y.ceil).max(1)
-    clear gt
+    clear editor_gt
     displayRequest = true
   else:
     pos = (pos - window.scrollDelta.y * 3).max(0).min(lines.high.float32)

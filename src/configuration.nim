@@ -14,7 +14,7 @@ type
     size*: IVec2
 
   ColorTheme* = object
-    scrollbar*: ColorRGBA
+    scrollbar*: ColorRGB
     verticalline*: ColorRGB
     linenumbers*: ColorRGB
     textarea*: ColorRGB
@@ -45,7 +45,7 @@ proc dumpHook*[T](s: var string, v: GVec2[T]) =
 
 
 let colorTheme* = ColorTheme(
-  scrollbar: rgba(48, 48, 48, 255),
+  scrollbar: rgb(48, 48, 48),
   verticalline: rgb(64, 64, 64),
   linenumbers: rgb(32, 32, 32),
   textarea: rgb(32, 32, 32),
