@@ -157,7 +157,6 @@ proc animate(dt: float32): bool =
       visual_pos = pos
     if pvp != (visual_pos * font.size).round.int32: result = true
 
-
 proc display =
   let
     size = (window.size.y.float32 / font.size).ceil.int

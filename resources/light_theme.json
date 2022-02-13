@@ -1,0 +1,20 @@
+{
+    "scrollbar": [193, 193, 193],
+    "verticalline": [211, 211, 211],
+    "linenumbers": [35, 120, 147],
+    "textarea": [255, 255, 255],
+
+    "sKeyword": [0, 0, 255],
+    "sOperatorWord": [175, 0, 219],
+    "sBuiltinType": [175, 0, 219],
+    "sControlFlow": [175, 0, 219],
+    "sType": [38,127,153],
+    "sStringLit": [163, 21, 21],
+    "sStringLitEscape": [242, 225, 162],
+    "sNumberLit": [9, 134, 88],
+    "sFunction": [121, 94, 38],
+    "sComment": [0, 128, 0],
+    "sTodoComment": [255, 140, 0],
+    "sLineNumber": [35, 120, 147],
+    "sElse": [0, 0, 0]
+}
