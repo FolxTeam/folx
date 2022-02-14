@@ -34,7 +34,6 @@ type
     sLineNumber*: ColorRGB
     sElse*: ColorRGB
 
-
 proc parseHook*[T](s: string, i: var int, v: var GVec2[T]) =
   var a: array[2, T]
   parseHook(s, i, a)
@@ -43,6 +42,27 @@ proc parseHook*[T](s: string, i: var int, v: var GVec2[T]) =
 
 proc dumpHook*[T](s: var string, v: GVec2[T]) =
   s.add [v.x, v.y].toJson
+
+const defaultColorTheme = ColorTheme(
+  scrollbar: rgb(48, 48, 48),
+  verticalline: rgb(64, 64, 64),
+  linenumbers: rgb(32, 32, 32),
+  textarea: rgb(32, 32, 32),
+
+  sKeyword: rgb(86, 156, 214),
+  sOperatorWord: rgb(86, 156, 214),
+  sBuiltinType: rgb(86, 156, 214),
+  sControlFlow: rgb(197, 134, 192),
+  sType: rgb(78, 201, 176),
+  sStringLit: rgb(206, 145, 120),
+  sStringLitEscape: rgb(242, 225, 162),
+  sNumberLit: rgb(181, 206, 168),
+  sFunction: rgb(220, 220, 170),
+  sComment: rgb(106, 153, 85),
+  sTodoComment: rgb(255, 140, 0),
+  sLineNumber: rgb(133, 133, 133),
+  sElse: rgb(212, 212, 212),
+)
 
 const defaultConfig = Config(
   font: "resources/FiraCode-Regular.ttf",
@@ -57,64 +77,24 @@ const defaultConfig = Config(
 )
 static: writeFile "config.default.json", defaultConfig.toJson.parseJson.pretty
 
-
 proc newHook*(x: var Config) =
   x = defaultConfig
 
+proc parseHook*(s: string, i: var int, v: var ColorRGB) =
+  var str: string
+  parseHook(s, i, str)
+  v = parseHex(str).rgb
 
-proc jsonColor(json: JsonNode): ColorRGB =
-  # Convert json array to ColorRGB
-  return rgb(uint8(json[0].getInt()), uint8(json[1].getInt()), uint8(json[2].getInt()))
+proc newHook*(x: var ColorTheme) =
+  x = defaultColorTheme
 
 proc readTheme*(file="resouces/dark_theme.json"): ColorTheme =
-  echo file
-  # TODO: rewrite the function to make it more readable
-  try:
-    let json = parseJson(file.readFile)
-    return ColorTheme(
-      scrollbar: jsonColor(json["scrollbar"]),
-      verticalline: jsonColor(json["verticalline"]),
-      linenumbers: jsonColor(json["linenumbers"]),
-      textarea: jsonColor(json["textarea"]),
 
-      sKeyword: jsonColor(json["sKeyword"]),
-      sOperatorWord: jsonColor(json["sOperatorWord"]),
-      sBuiltinType: jsonColor(json["sBuiltinType"]),
-      sControlFlow: jsonColor(json["sControlFlow"]),
-      sType: jsonColor(json["sType"]),
-      sStringLit: jsonColor(json["sStringLit"]),
-      sStringLitEscape: jsonColor(json["sStringLitEscape"]),
-      sNumberLit: jsonColor(json["sNumberLit"]),
-      sFunction: jsonColor(json["sFunction"]),
-      sComment: jsonColor(json["sComment"]),
-      sTodoComment: jsonColor(json["sTodoComment"]),
-      sLineNumber: jsonColor(json["sLineNumber"]),
-      sElse: jsonColor(json["sElse"]),
-    )
+  try:  file.readFile.fromJson(ColorTheme)
   except:
     # TODO: notification ui component
     echo "Couldn't read the theme file"
-
-    return ColorTheme(
-      scrollbar: rgb(48, 48, 48),
-      verticalline: rgb(64, 64, 64),
-      linenumbers: rgb(32, 32, 32),
-      textarea: rgb(32, 32, 32),
-
-      sKeyword: rgb(86, 156, 214),
-      sOperatorWord: rgb(86, 156, 214),
-      sBuiltinType: rgb(86, 156, 214),
-      sControlFlow: rgb(197, 134, 192),
-      sType: rgb(78, 201, 176),
-      sStringLit: rgb(206, 145, 120),
-      sStringLitEscape: rgb(242, 225, 162),
-      sNumberLit: rgb(181, 206, 168),
-      sFunction: rgb(220, 220, 170),
-      sComment: rgb(106, 153, 85),
-      sTodoComment: rgb(255, 140, 0),
-      sLineNumber: rgb(133, 133, 133),
-      sElse: rgb(212, 212, 212),
-    )
+    return defaultColorTheme
 
 proc readConfig*(file="config.json"): Config =
   try:    file.readFile.fromJson(Config)
