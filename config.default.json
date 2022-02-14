@@ -1,7 +1,9 @@
 {
+  "colorTheme": "resources/themes/dark.json",
   "font": "resources/FiraCode-Regular.ttf",
-  "colorTheme": "resources/dark_theme.json",
   "fontSize": 11.0,
+  "interfaceFont": "resources/Roboto-Regular.ttf",
+  "interfaceFontSize": 13.0,
   "window": {
     "size": [
       1280,

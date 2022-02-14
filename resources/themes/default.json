@@ -1,0 +1,20 @@
+{
+  "scrollbar": "303030",
+  "verticalline": "404040",
+  "linenumbers": "202020",
+  "textarea": "202020",
+  "statusBarBg": "007ACC",
+  "sKeyword": "569CD6",
+  "sOperatorWord": "569CD6",
+  "sBuiltinType": "569CD6",
+  "sControlFlow": "C586C0",
+  "sType": "4EC9B0",
+  "sStringLit": "CE9178",
+  "sStringLitEscape": "F2E1A2",
+  "sNumberLit": "B5CEA8",
+  "sFunction": "DCDCAA",
+  "sComment": "6A9955",
+  "sTodoComment": "FF8C00",
+  "sLineNumber": "858585",
+  "sElse": "D4D4D4"
+}
