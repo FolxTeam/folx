@@ -1,0 +1,20 @@
+{
+    "scrollbar": "c1c1c1",
+    "verticalline": "d3d3d3",
+    "linenumbers": "237893",
+    "textarea": "ffffff",
+
+    "sKeyword": "0000ff",
+    "sOperatorWord": "af00db",
+    "sBuiltinType": "af00db",
+    "sControlFlow": "af00db",
+    "sType": "267f99",
+    "sStringLit": "a31515",
+    "sStringLitEscape": "f2e1a2",
+    "sNumberLit": "098658",
+    "sFunction": "795e26",
+    "sComment": "008000",
+    "sTodoComment": "ff8c00",
+    "sLineNumber": "237893",
+    "sElse": "000000"
+}

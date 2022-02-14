@@ -4,6 +4,7 @@ import jsony, pixie
 type
   Config* = object
     font*: string
+    colorTheme*: string
     fontSize*: float32
 
     window*: WindowConfig
@@ -14,7 +15,7 @@ type
     size*: IVec2
 
   ColorTheme* = object
-    scrollbar*: ColorRGBA
+    scrollbar*: ColorRGB
     verticalline*: ColorRGB
     linenumbers*: ColorRGB
     textarea*: ColorRGB
@@ -33,7 +34,6 @@ type
     sLineNumber*: ColorRGB
     sElse*: ColorRGB
 
-
 proc parseHook*[T](s: string, i: var int, v: var GVec2[T]) =
   var a: array[2, T]
   parseHook(s, i, a)
@@ -43,9 +43,8 @@ proc parseHook*[T](s: string, i: var int, v: var GVec2[T]) =
 proc dumpHook*[T](s: var string, v: GVec2[T]) =
   s.add [v.x, v.y].toJson
 
-
-let colorTheme* = ColorTheme(
-  scrollbar: rgba(48, 48, 48, 255),
+const defaultColorTheme = ColorTheme(
+  scrollbar: rgb(48, 48, 48),
   verticalline: rgb(64, 64, 64),
   linenumbers: rgb(32, 32, 32),
   textarea: rgb(32, 32, 32),
@@ -67,6 +66,7 @@ let colorTheme* = ColorTheme(
 
 const defaultConfig = Config(
   font: "resources/FiraCode-Regular.ttf",
+  colorTheme: "resources/dark_theme.json",
   fontSize: 11'f32,
   
   window: WindowConfig(
@@ -77,11 +77,27 @@ const defaultConfig = Config(
 )
 static: writeFile "config.default.json", defaultConfig.toJson.parseJson.pretty
 
-
 proc newHook*(x: var Config) =
   x = defaultConfig
 
+proc parseHook*(s: string, i: var int, v: var ColorRGB) =
+  var str: string
+  parseHook(s, i, str)
+  v = parseHex(str).rgb
+
+proc newHook*(x: var ColorTheme) =
+  x = defaultColorTheme
+
+proc readTheme*(file="resouces/dark_theme.json"): ColorTheme =
+
+  try:  file.readFile.fromJson(ColorTheme)
+  except:
+    # TODO: notification ui component
+    echo "Couldn't read the theme file"
+    return defaultColorTheme
 
 proc readConfig*(file="config.json"): Config =
   try:    file.readFile.fromJson(Config)
   except: defaultConfig
+
+let colorTheme* = readTheme(readConfig().colorTheme)
