@@ -9,6 +9,13 @@ type
 proc bound[T](x: T, s: Slice[T]): T = x.max(s.a).min(s.b)
 proc bound[T](x, s: Slice[T]): Slice[T] = Slice[T](a: x.a.bound(s), b: x.b.bound(s))
 
+proc bound(a, b: Rect): Rect = rect(
+  a.x.bound(b.x .. b.x+b.w),
+  a.y.bound(b.y .. b.y+b.h),
+  a.w.bound(0'f32 .. b.x+b.w-a.x),
+  a.h.bound(0'f32 .. b.y+b.h-a.y),
+)
+
 proc indentation*(text: seq[seq[Rune]]): Indentation =
   proc indentation(line: seq[Rune], prev: seq[int]): tuple[len: seq[int], has_graph: bool] =
     var sl = block:
@@ -41,8 +48,8 @@ proc indentation*(text: seq[seq[Rune]]): Indentation =
 proc text_area(
   r: Context,
   box: Rect,
-  pos: float32,
   gt: var GlyphTable,
+  pos: float32,
   bg: ColorRgb,
   text: seq[seq[Rune]],
   colors: seq[seq[ColoredPos]],
@@ -71,8 +78,8 @@ proc text_area(
 proc line_numbers(
   r: Context,
   box: Rect,
-  pos: float32,
   gt: var GlyphTable,
+  pos: float32,
   bg: ColorRgb,
   text: seq[seq[Rune]],
   ) =
@@ -108,12 +115,36 @@ proc scroll_bar(
   r.fillRect box
 
 
+proc cursor(
+  r: Context,
+  box: Rect,
+  gt: var GlyphTable,
+  pos: float32,
+  cpos: IVec2,
+  text: seq[seq[Rune]],
+  ) =
+  if text.len == 0: return
+  
+  let y = cpos.y.int.bound(0..text.high)
+  let x = cpos.x.int.bound(0..text[y].high)
+  
+  r.fillStyle = colorTheme.sElse
+  r.fillRect rect(
+    box.xy + vec2(
+      text[y][0..x].width(gt).float32 - 1,
+      round(gt.font.size * 1.27) * (y.float32 - pos) + gt.font.size * 0.125
+    ),
+    vec2(2, gt.font.size)
+  ).bound(box)
+
+
+
 proc text_editor*(
   r: Context,
   box: Rect,
-  pos: float32,
   gt: var GlyphTable,
   bg: ColorRgb,
+  pos: float32,
   text: seq[seq[Rune]],
   colors: seq[seq[ColoredPos]],
   indentation: Indentation,
@@ -126,20 +157,30 @@ proc text_editor*(
   
   r.line_numbers(
     box = rect(vec2(10, 0), vec2(line_number_width, box.h)),
-    pos = pos,
     gt = gt,
+    pos = pos,
     bg = colorTheme.textarea,
     text = text,
   )
+
   r.text_area(
     box = rect(vec2(line_number_width + 30, 0), box.wh - vec2(10, 0)),
-    pos = pos,
     gt = gt,
+    pos = pos,
     bg = colorTheme.textarea,
     text = text,
     colors = colors,
     indentation = indentation,
   )
+
+  r.cursor(
+    box = rect(vec2(line_number_width + 30, 0), box.wh - vec2(10, 0)),
+    gt = gt,
+    pos = pos,
+    cpos = ivec2(5, pos.round.int32 + 5),
+    text = text,
+  )
+
   r.scroll_bar(
     box = rect(vec2(box.w - 10, 0), vec2(10, box.h)),
     pos = pos,

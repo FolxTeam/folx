@@ -66,8 +66,8 @@ proc display =
 
   r.text_editor(
     box = rect(vec2(), window.size.vec2 - vec2(0, 20)),
-    pos = visual_pos,
     gt = editor_gt,
+    pos = visual_pos,
     bg = colorTheme.textarea,
     text = lines,
     colors = colors,
