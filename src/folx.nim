@@ -15,7 +15,7 @@ proc status_bar(
   r.fillStyle = bg
   r.fillRect box
 
-  r.image.draw text, @[(sText.color, 0)], rect(box.xy + margin, box.wh - margin), gt, bg
+  r.image.draw text, @[(sText.color, 0)], box.xy + margin, rect(box.xy, box.wh - margin), gt, bg
 
 
 

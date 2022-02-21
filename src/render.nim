@@ -15,17 +15,29 @@ proc newGlyphTable*(font: Font, fontSize: float32): GlyphTable =
   GlyphTable(font: font)
 
 
+proc bound*(a, b: Rect): Rect =
+  let pos2 = vec2(
+    max(b.x - a.x, 0),
+    max(b.y - a.y, 0)
+  )
+  result.xy = a.xy + pos2
+  result.wh = vec2(
+    (a.w - pos2.x).max(0),
+    (a.h - pos2.y).max(0)
+  )
+
+
 {.push, checks: off.}
 
-func draw*(r: Image, g: Image, pos: IVec2, size: IVec2) =
+func draw*(r: Image, g: Image, pos: IVec2, size: IVec2, srcPos: IVec2) =
   ## draw image (fast)
 
   # clip
-  let pos2 = ivec2(max(-pos.x, 0), max(-pos.y, 0))
+  let pos2 = ivec2(max(-pos.x, 0), max(-pos.y, 0)) + srcPos
   let pos = pos + pos2
   let size = ivec2(
-    size.x.min(g.width.int32 - pos2.x).min(r.width.int32 - pos.x),
-    size.y.min(g.height.int32 - pos2.y).min(r.height.int32 - pos.y)
+    (size.x - srcPos.x).min(g.width.int32 - pos2.x).min(r.width.int32 - pos.x),
+    (size.y - srcPos.y).min(g.height.int32 - pos2.y).min(r.height.int32 - pos.y)
   )
   if size.x <= 0 or size.y <= 0: return
 
@@ -39,10 +51,14 @@ func draw*(r: Image, g: Image, pos: IVec2, size: IVec2) =
       inc isrc
       inc idst
 
-proc vertical_line*(r: Image; x, y, h: int32, color: ColorRgb) =
+proc vertical_line*(r: Image; x, y, h: int32, box: Rect, color: ColorRgb) =
   ## draw vertical line (fast)
-  let x = x.min(r.width).max(0)
-  for i in countup(y.min(r.height - 1).max(0) * r.width + x, (y + h).min(r.height - 1).max(0) * r.width + x, r.width):
+  let (bx, by, bw, bh) = (box.x.round.int32, box.y.round.int32, box.w.round.int32, box.h.round.int32)
+  let x = x.min(bx + bw).min(r.width).max(bx).max(0)
+  for i in countup(
+    y.min(by + bh).min(r.height - 1).max(by).max(0) * r.width + x,
+    ((y + h).min(by + bh).min(r.height).max(by).max(0) - 1) * r.width + x, r.width
+  ):
     r.data[i] = rgbx(color.r, color.g, color.b, 255)
 
 {.pop.}
@@ -70,9 +86,12 @@ func clear*(gt: var GlyphTable) =
   clear gt.glyphs
 
 
-proc draw*(r: Image, text: seq[Rune], colors: seq[ColoredPos], box: Rect, gt: var GlyphTable, bg: ColorRgb) =
+proc draw*(r: Image, text: seq[Rune], colors: seq[ColoredPos], pos: Vec2, box: Rect, gt: var GlyphTable, bg: ColorRgb) =
   ## draw colored text
-  var (x, y, w, h) = (box.x.round.int32, box.y.round.int32, box.w.round.int32, box.h.round.int32)
+  var (x, y, w, h) = (pos.x.round.int32, pos.y.round.int32, (box.w - pos.x + box.x).round.int32, (box.h - pos.y + box.y).round.int32)
+  # todo: clip x (from start)
+  let hd = max(box.y - pos.y, 0).round.int32
+
   var i = 0
   var ic = -1
   var color: ColorRgb
@@ -99,7 +118,7 @@ proc draw*(r: Image, text: seq[Rune], colors: seq[ColoredPos], box: Rect, gt: va
       continue
 
     if not c.isWhiteSpace:
-      r.draw glyph, ivec2(x, y), ivec2(w, h)
+      r.draw glyph, ivec2(x, y), ivec2(w, h), ivec2(0, hd)
 
     let bx = glyph.width.int32
     x += bx

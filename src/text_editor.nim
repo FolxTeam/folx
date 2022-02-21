@@ -9,17 +9,6 @@ type
 proc bound[T](x: T, s: Slice[T]): T = x.max(s.a).min(s.b)
 proc bound[T](x, s: Slice[T]): Slice[T] = Slice[T](a: x.a.bound(s), b: x.b.bound(s))
 
-proc bound(a, b: Rect): Rect =
-  let pos2 = vec2(
-    max(-a.x, b.x),
-    max(-a.y, b.y)
-  ) - b.xy
-  result.xy = a.xy + pos2
-  result.wh = vec2(
-    (a.w - pos2.x).max(0),
-    (a.h - pos2.y).max(0)
-  )
-
 proc indentation*(text: seq[seq[Rune]]): Indentation =
   proc indentation(line: seq[Rune], prev: seq[int]): tuple[len: seq[int], has_graph: bool] =
     var sl = block:
@@ -65,18 +54,20 @@ proc text_area(
     size = (box.h / gt.font.size).ceil.int
     space_w = static(" ".toRunes).width(gt)
 
-  let dy = round(gt.font.size * 1.27)
+    dy = round(gt.font.size * 1.27)
+  
   var y = box.y - dy * (pos mod 1)
 
   for i in (pos.int..pos.ceil.int+size).bound(text.low..text.high):
-    r.image.draw text[i], colors[i], rect(vec2(box.x, y), vec2(box.x + box.w, y + box.h)), gt, bg
+    r.image.draw text[i], colors[i], vec2(box.x, y), box, gt, bg
 
     var x = box.x.round.int
     for i, l in indentation[i].len:
-      r.image.vertical_line x.int32, y.int32, dy.int32, colorTheme.verticaLline
+      r.image.vertical_line x.int32, y.int32, dy.int32, box, colorTheme.verticaLline
       x += l * space_w
 
     y += dy
+
 
 
 proc line_numbers(
@@ -94,7 +85,7 @@ proc line_numbers(
   for i in (pos.int..pos.ceil.int+size).bound(text.low..text.high):
     let s = toRunes $(i+1)
     let w = float32 s.width(gt)
-    r.image.draw s, @[(sLineNumber.color, 0)], rect(vec2(box.x + box.w - w, y), vec2(w, box.h - y)), gt, bg
+    r.image.draw s, @[(sLineNumber.color, 0)], vec2(box.x + box.w - w, y), box, gt, bg
     y += round(gt.font.size * 1.27)
 
 
@@ -160,7 +151,7 @@ proc text_editor*(
     line_number_width = float32 ($total).toRunes.width(gt)
   
   r.line_numbers(
-    box = rect(vec2(10, 0), vec2(line_number_width, box.h)),
+    box = rect(box.xy + vec2(10, 0), vec2(line_number_width, box.h)),
     gt = gt,
     pos = pos,
     bg = colorTheme.textarea,
@@ -168,7 +159,7 @@ proc text_editor*(
   )
 
   r.text_area(
-    box = rect(vec2(line_number_width + 30, 0), box.wh - vec2(10, 0)),
+    box = rect(box.xy + vec2(line_number_width + 30, 0), box.wh - vec2(10, 0) - vec2(line_number_width + 30, 0)),
     gt = gt,
     pos = pos,
     bg = colorTheme.textarea,
@@ -178,7 +169,7 @@ proc text_editor*(
   )
 
   r.cursor(
-    box = rect(vec2(line_number_width + 30, 0), box.wh - vec2(10, 0)),
+    box = rect(box.xy + vec2(line_number_width + 30, 0), box.wh - vec2(10, 0) - vec2(line_number_width + 30, 0)),
     gt = gt,
     pos = pos,
     cpos = ivec2(5, pos.round.int32 + 5),
@@ -186,7 +177,7 @@ proc text_editor*(
   )
 
   r.scroll_bar(
-    box = rect(vec2(box.w - 10, 0), vec2(10, box.h)),
+    box = rect(box.xy + vec2(box.w - 10, 0), vec2(10, box.h)),
     pos = pos,
     size = size,
     total = total + size - 1,
