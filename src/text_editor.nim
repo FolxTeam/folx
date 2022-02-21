@@ -9,12 +9,16 @@ type
 proc bound[T](x: T, s: Slice[T]): T = x.max(s.a).min(s.b)
 proc bound[T](x, s: Slice[T]): Slice[T] = Slice[T](a: x.a.bound(s), b: x.b.bound(s))
 
-proc bound(a, b: Rect): Rect = rect(
-  a.x.bound(b.x .. b.x+b.w),
-  a.y.bound(b.y .. b.y+b.h),
-  a.w.bound(0'f32 .. b.x+b.w-a.x),
-  a.h.bound(0'f32 .. b.y+b.h-a.y),
-)
+proc bound(a, b: Rect): Rect =
+  let pos2 = vec2(
+    max(-a.x, b.x),
+    max(-a.y, b.y)
+  ) - b.xy
+  result.xy = a.xy + pos2
+  result.wh = vec2(
+    (a.w - pos2.x).max(0),
+    (a.h - pos2.y).max(0)
+  )
 
 proc indentation*(text: seq[seq[Rune]]): Indentation =
   proc indentation(line: seq[Rune], prev: seq[int]): tuple[len: seq[int], has_graph: bool] =
@@ -127,7 +131,7 @@ proc cursor(
   
   let y = cpos.y.int.bound(0..text.high)
   let x = cpos.x.int.bound(0..text[y].high)
-  
+
   r.fillStyle = colorTheme.sElse
   r.fillRect rect(
     box.xy + vec2(
