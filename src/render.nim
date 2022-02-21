@@ -9,6 +9,12 @@ type
     glyphs: Table[tuple[c: Rune; fg, bg: ColorRgb], Image]
 
 
+proc newGlyphTable*(font: Font, fontSize: float32): GlyphTable =
+  font.size = fontSize
+  font.paint.color = color(1, 1, 1, 1)
+  GlyphTable(font: font)
+
+
 {.push, checks: off.}
 
 func draw*(r: Image, g: Image, pos: IVec2, size: IVec2) =
@@ -64,13 +70,13 @@ func clear*(gt: var GlyphTable) =
   clear gt.glyphs
 
 
-proc draw*(r: Image, text: string, colors: seq[ColoredPos], box: Rect, gt: var GlyphTable, bg: ColorRgb) =
+proc draw*(r: Image, text: seq[Rune], colors: seq[ColoredPos], box: Rect, gt: var GlyphTable, bg: ColorRgb) =
   ## draw colored text
   var (x, y, w, h) = (box.x.round.int32, box.y.round.int32, box.w.round.int32, box.h.round.int32)
   var i = 0
   var ic = -1
   var color: ColorRgb
-  for c in text.runes:
+  for c in text:
     defer: inc i, c.size
     if colors.len > ic + 1 and colors[ic + 1].startPos == i:
       inc ic
@@ -101,8 +107,8 @@ proc draw*(r: Image, text: string, colors: seq[ColoredPos], box: Rect, gt: var G
     if w <= 0: return
 
 
-proc width*(text: string, gt: var GlyphTable): int32 =
+proc width*(text: seq[Rune], gt: var GlyphTable): int32 =
   ## get width of text in pixels for font, specified in gt
-  for c in text.runes:
+  for c in text:
     if (c, rgb(0, 0, 0), rgb(0, 0, 0)) notin gt.glyphs: gt.render(c, rgb(0, 0, 0), rgb(0, 0, 0))
     result += gt.glyphs[(c, rgb(0, 0, 0), rgb(0, 0, 0))].width.int32
