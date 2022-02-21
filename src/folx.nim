@@ -1,4 +1,4 @@
-import os, times, math, sequtils, unicode, strutils
+import os, times, math, sequtils, unicode, strutils, std/monotimes
 import pixwindy, pixie
 import render, syntax_highlighting, configuration, text_editor, filesystem
 
@@ -97,15 +97,20 @@ proc animate(dt: float32): bool =
   if pos != visual_pos:
     let
       fontSize = editor_gt.font.size
-      pvp = (visual_pos * fontSize).round.int32
+      pvp = (visual_pos * fontSize).round.int32  # visual position in pixels
       
-      d = (abs(pos - visual_pos) * (0.00001 / dt)).max(0.1).min(abs(pos - visual_pos))
+      # position delta
+      d = (abs(pos - visual_pos) * sqrt(sqrt(sqrt(dt))) / 2).max(0.1).min(abs(pos - visual_pos))
 
+    # move position by delta
     if pos > visual_pos: visual_pos += d
     else:                visual_pos -= d
 
+    # if position close to integer number, round it
     if abs(visual_pos - pos) < 1 / fontSize / 2.1:
       visual_pos = pos
+    
+    # if position changed, signal to display by setting result to true
     if pvp != (visual_pos * fontSize).round.int32: result = true
 
 
@@ -195,18 +200,22 @@ window.onButtonPress = proc(button: Button) =
 display()
 window.visible = true
 
-var pt = now()
+var pt = getMonoTime()  # main clock
 while not window.closeRequested:
-  let nt = now()
+  let nt = getMonoTime()  # tick start time
   pollEvents()
+  
+  let dt = getMonoTime()
+  # animate
+  displayRequest = displayRequest or animate((dt - pt).inMicroseconds.int / 1_000_000)
 
-  let dt = now()
-  displayRequest = displayRequest or animate((dt - nt).inMicroseconds.int / 1_000_000)
   if displayRequest:
     display()
     displayRequest = false
-  pt = dt
+  
+  pt = dt  # update main clock
 
-  let ct = now()
+  # sleep when no events happen
+  let ct = getMonoTime()
   if (ct - nt).inMilliseconds < 10:
     sleep(10 - (ct - nt).inMilliseconds.int)
