@@ -3,6 +3,16 @@ import pixwindy, pixie
 import render, syntax_highlighting, configuration, text_editor, filesystem
 import std/options
 
+proc digits(x: BiggestInt): int =
+  var x = x
+  if x == 0:
+    return 1
+
+  while x != 0:
+    inc result
+    x = x div 10
+  
+
 proc status_bar(
   r: Context,
   box: Rect,
@@ -27,35 +37,41 @@ proc explorer_area(
   explorer: Explorer,
   ) =
 
-  var
-    i = 0
-    text: seq[string]
-
-  text.add(explorer.current_dir)
-
-  for file in explorer.files:
-    if i == int(explorer.item_index):
-      text.add("--- " & file.name & file.ext & " " & $file.info.size & " " & $file.info.lastWriteTime & " ---") 
-    else:
-      text.add(file.name & file.ext & " " & $file.info.size & " " & $file.info.lastWriteTime)
-
-    inc i  
-
-  let
-    size = (box.h / gt.font.size).ceil.int
-    space_w = static(" ".toRunes).width(gt)
-
   let dy = round(gt.font.size * 1.27)
+
   var y = box.y - dy * (pos mod 1)
 
-  for i in explorer.files.low..explorer.files.high+1:
-    r.image.draw text[i].toRunes, @[(sText.color, 0)], vec2(box.x, y), box, gt, bg
+  var max_file_length = 0
+  var max_file_size: BiggestInt = 0
+  
+  for file in explorer.files:
+    if (file.name & file.ext).len() > max_file_length:
+      max_file_length = (file.name & file.ext).len()
+    if file.info.size > max_file_size:
+      max_file_size = file.info.size
 
-    # var x = box.x.round.int
-    # for i, l in indentation[i].len:
-    #   image.vertical_line x.int32, y.int32, dy.int32, configuration.colorTheme.verticalline
-    #   x += l * space_w
 
+  r.image.draw explorer.current_dir.toRunes, @[(sKeyword.color, 0)], vec2(box.x, y), box, gt, bg
+
+  y += dy
+
+  for i in explorer.files.low..explorer.files.high:
+    let file = explorer.files[i]
+    var count_spaces_name = max_file_length + 1 - (file.name & file.ext).len()
+    var count_scapces_size = max_file_size.digits() + 1 - digits(file.info.size)
+
+    let text = file.name & file.ext & " ".repeat(count_spaces_name) & $file.info.size & " ".repeat(count_scapces_size) & $file.info.lastWriteTime.format("hh:mm dd/MM/yy")
+    if i == int(explorer.item_index):
+      r.fillStyle = colorTheme.statusBarBg
+      r.fillRect rect(vec2(0,y), vec2(text.toRunes.width(gt).float32, dy))
+
+      r.image.draw toRunes(text), @[(rgb(0, 0, 0), 0)], vec2(box.x, y), box, gt, colorTheme.statusBarBg
+
+    else:
+      if file.info.kind == PathComponent.pcDir:
+        r.image.draw text.toRunes, @[(sStringLitEscape.color, 0)], vec2(box.x, y), box, gt, bg
+      else:
+        r.image.draw text.toRunes, @[(sText.color, 0)], vec2(box.x, y), box, gt, bg
     y += dy
 
 let window = newWindow("folx", config.window.size, visible=false)
