@@ -1,4 +1,5 @@
 import os, syntax_highlighting
+import std/options
 
 type 
   File* = object
@@ -21,16 +22,22 @@ type
     Left,
     Right
 
-proc newFile(file_path: string): File =
+
+proc newFile(file_path: string): Option[File] =
   let (dir, name, ext) = splitFile(file_path)
-  let info = getFileInfo(file_path)
-  return File(
+  var info: FileInfo 
+  try:
+    info = getFileInfo(file_path)
+    return some(File(
       path: file_path,
       dir: dir,
       name: name,
       ext: ext,
       info: info
-  )
+    ))
+  except:
+    return none(File)
+
 
 proc move*(explorer: var Explorer, command: MoveCommand, path: string, colors: var seq[seq[ColoredPos]]): string =
 
@@ -42,13 +49,18 @@ proc move*(explorer: var Explorer, command: MoveCommand, path: string, colors: v
   let (dir, name, ext) = splitFile(file_path)
 
   if command == MoveCommand.Left:
-    explorer.current_dir = parentDir(explorer.current_dir)
+    if explorer.current_dir.isRootDir():
+      explorer.current_dir = normalizedPath(joinPath(explorer.current_dir, "/"))
+    else:
+      explorer.current_dir = parentDir(explorer.current_dir)
     
   if explorer.current_dir == "":
     explorer.current_dir = dir
  
   for file in walkDir(explorer.current_dir):
-    dir_files.add(newFile(file.path))
+    let file_type = newFile(file.path)
+    if file_type.isSome():
+      dir_files.add(file_type.get())
 
   if command == MoveCommand.Up:
     if explorer.item_index > 0: explorer.item_index -= 1 else: explorer.item_index = 0
@@ -58,14 +70,13 @@ proc move*(explorer: var Explorer, command: MoveCommand, path: string, colors: v
   explorer.files = dir_files
 
   var i = 0
-  
   for file in dir_files:
     if i == int(explorer.item_index):
       if command == MoveCommand.Right:
         if file.info.kind == PathComponent.pcFile:
           return file.path
         elif file.info.kind == PathComponent.pcDir:
-          explorer.current_dir = explorer.current_dir & "\\" & file.name
+          explorer.current_dir = normalizedPath(joinPath(explorer.current_dir, file.name))
           return path
     inc i
     
