@@ -207,6 +207,7 @@ window.onButtonPress = proc(button: Button) =
       let new_path = explorer.move(MoveCommand.Right, config.file, colors)
       if new_path.isSome:
         update_file(new_path.get())
+        explorer.display = false
     else: discard
 
   else:
