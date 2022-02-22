@@ -1,6 +1,6 @@
 import os, times, math, sequtils, unicode, strutils, std/monotimes
 import pixwindy, pixie
-import render, syntax_highlighting, configuration, text_editor, filesystem
+import render, syntax_highlighting, configuration, text_editor, explorer
 
 proc digits(x: BiggestInt): int =
   var x = x
@@ -100,7 +100,7 @@ var
   visual_pos = pos
   cursor = ivec2(0, 0)
 
-var explorer = Explorer(current_dir: "", item_index: 0, files: @[], display: false)
+var explorer1 = Explorer(current_dir: "", item_index: 0, files: @[], display: false)
 
 proc reopen_file*(file: string) =
   window.title = file & " - folx"
@@ -134,14 +134,14 @@ proc animate(dt: float32): bool =
 proc display =
   image.clear colorTheme.textarea.color.rgbx
 
-  if explorer.display:
+  if explorer1.display:
     r.explorer_area(
       image = image,
       box = rect(vec2(0, 0), window.size.vec2 - vec2(10, 20)),
       pos = visual_pos,
       gt = editor_gt,
       bg = configuration.colorTheme.textarea,
-      explorer = explorer,
+      explorer = explorer1,
     )
   else:  
     r.text_editor(
@@ -195,26 +195,27 @@ window.onResize = proc =
 
 window.onButtonPress = proc(button: Button) =
   if window.buttonDown[KeyLeftControl] and button == KeyO:
-    explorer.display = not explorer.display
+    explorer1.display = not explorer1.display
     
-    if explorer.display:
-      explorer.updateDir config.file
+    if explorer1.display:
+      explorer1.updateDir config.file
 
-  elif explorer.display:
+  elif explorer1.display:
     explorer_onButtonDown(
       button = button,
-      explorer = explorer,
+      explorer = explorer1,
       path = config.file,
       onFileOpen = (proc(file: string) =
         reopen_file file
-        explorer.display = false
+        explorer1.display = false
       ),
     )
 
   else:
     text_editor_onButtonDown(
       button,
-      cursor
+      cursor,
+      text = lines,
     )
   
   display()

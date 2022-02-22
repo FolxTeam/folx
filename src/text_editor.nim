@@ -119,17 +119,19 @@ proc cursor(
   text: seq[seq[Rune]],
   ) =
   if text.len == 0: return
+
+  let width = gt.font.size / 8
   
   let y = cpos.y.int.bound(0..text.high)
-  let x = cpos.x.int.bound(0..text[y].high)
+  let x = cpos.x.int.bound(0..text[y].len)
 
   r.fillStyle = colorTheme.sElse
   r.fillRect rect(
     box.xy + vec2(
-      text[y][0..x].width(gt).float32 - 1,
+      text[y][0 .. x-1].width(gt).float32 - width / 2,
       round(gt.font.size * 1.27) * (y.float32 - pos) + gt.font.size * 0.125
     ),
-    vec2(2, gt.font.size)
+    vec2(width, gt.font.size)
   ).bound(box)
 
 
@@ -188,14 +190,37 @@ proc text_editor*(
 proc text_editor_onButtonDown*(
   button: Button,
   cursor: var IVec2,
+  text: seq[seq[Rune]],
   ) =
+  if text.len < 0: return
+
   case button
   of KeyRight:
+    cursor.y = cursor.y.bound(0'i32..text.high.int32)
+    cursor.x = cursor.x.bound(0'i32..text[cursor.y].len.int32)
+    
     cursor.x += 1
+    if cursor.x > text[cursor.y].len and cursor.y < text.high:
+      cursor.y += 1
+      cursor.x = 0
+    cursor.x = cursor.x.bound(0'i32..text[cursor.y].len.int32)
+  
   of KeyLeft:
+    cursor.y = cursor.y.bound(0'i32..text.high.int32)
+    cursor.x = cursor.x.bound(0'i32..text[cursor.y].len.int32)
+
     cursor.x -= 1
+    if cursor.x < 0 and cursor.y > 0:
+      cursor.y -= 1
+      cursor.x = text[cursor.y].len.int32
+    cursor.x = cursor.x.bound(0'i32..text[cursor.y].len.int32)
+  
   of KeyDown:
     cursor.y += 1
+    cursor.y = cursor.y.bound(0'i32..text.high.int32)
+  
   of KeyUp:
     cursor.y -= 1
+    cursor.y = cursor.y.bound(0'i32..text.high.int32)
+  
   else: discard
