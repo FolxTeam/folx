@@ -39,11 +39,11 @@ proc newFile(file_path: string): Option[File] =
     return none(File)
 
 
-proc move*(explorer: var Explorer, command: MoveCommand, path: string, colors: var seq[seq[ColoredPos]]): string =
+proc move*(explorer: var Explorer, command: MoveCommand, path: string, colors: var seq[seq[ColoredPos]]): Option[string] =
 
   explorer.files = @[]
 
-  var dir_files: seq[File]
+  # var dir_files: seq[File]
 
   let file_path = absolutePath(path)
   let (dir, name, ext) = splitFile(file_path)
@@ -52,6 +52,7 @@ proc move*(explorer: var Explorer, command: MoveCommand, path: string, colors: v
     if explorer.current_dir.isRootDir():
       explorer.current_dir = normalizedPath(joinPath(explorer.current_dir, "/"))
     else:
+      explorer.item_index = 0
       explorer.current_dir = parentDir(explorer.current_dir)
     
   if explorer.current_dir == "":
@@ -60,23 +61,30 @@ proc move*(explorer: var Explorer, command: MoveCommand, path: string, colors: v
   for file in walkDir(explorer.current_dir):
     let file_type = newFile(file.path)
     if file_type.isSome():
-      dir_files.add(file_type.get())
+      explorer.files.add(file_type.get())
 
   if command == MoveCommand.Up:
     if explorer.item_index > 0: explorer.item_index -= 1 else: explorer.item_index = 0
   if command == MoveCommand.Down:
-    if int(explorer.item_index) < dir_files.len-1: explorer.item_index += 1 else: explorer.item_index = uint(dir_files.len - 1)
+    if int(explorer.item_index) < explorer.files.len-1:
+      explorer.item_index += 1
+    else:
+      if explorer.files.len > 0:
+        explorer.item_index = uint(explorer.files.len - 1)
+      else:
+        explorer.item_index = 0
 
-  explorer.files = dir_files
 
   var i = 0
-  for file in dir_files:
+
+  for file in explorer.files:
     if i == int(explorer.item_index):
       if command == MoveCommand.Right:
         if file.info.kind == PathComponent.pcFile:
-          return file.path
+          return some(file.path)
         elif file.info.kind == PathComponent.pcDir:
+          explorer.item_index = 0
           explorer.current_dir = normalizedPath(joinPath(explorer.current_dir, file.name))
-          return path
+          return some(path)
     inc i
-    
+  return none(string)  

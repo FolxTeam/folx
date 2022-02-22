@@ -1,7 +1,7 @@
 import os, times, math, sequtils, unicode, strutils, std/monotimes
 import pixwindy, pixie
 import render, syntax_highlighting, configuration, text_editor, filesystem
-
+import std/options
 
 proc status_bar(
   r: Context,
@@ -186,7 +186,9 @@ window.onButtonPress = proc(button: Button) =
     if button == KeyLeft:
       discard explorer.move(MoveCommand.Left, config.file, colors)
     if button == KeyRight:
-      update_file(explorer.move(MoveCommand.Right, config.file, colors))
+      let new_path = explorer.move(MoveCommand.Right, config.file, colors)
+      if new_path.isSome:
+        update_file(new_path.get())
 
   if window.buttonDown[KeyLeftControl] and button == KeyO:
     echo "Ctrl+O"
