@@ -1,7 +1,6 @@
 import os, times, math, sequtils, unicode, strutils, std/monotimes
 import pixwindy, pixie
 import render, syntax_highlighting, configuration, text_editor, filesystem
-import std/options
 
 proc digits(x: BiggestInt): int =
   var x = x
@@ -103,7 +102,7 @@ var
 
 var explorer = Explorer(current_dir: "", item_index: 0, files: @[], display: false)
 
-proc update_file*(file: string) =
+proc reopen_file*(file: string) =
   window.title = file & " - folx"
   text = file.readFile
   colors = text.parseNimCode.map(color)
@@ -195,32 +194,29 @@ window.onResize = proc =
   display()
 
 window.onButtonPress = proc(button: Button) =
-  if explorer.display:
-    case button
-    of KeyDown:
-      discard explorer.move(MoveCommand.Down, config.file, colors)
-    of KeyUp:
-      discard explorer.move(MoveCommand.Up, config.file, colors)
-    of KeyLeft:
-      discard explorer.move(MoveCommand.Left, config.file, colors)
-    of KeyRight:
-      let new_path = explorer.move(MoveCommand.Right, config.file, colors)
-      if new_path.isSome:
-        update_file(new_path.get())
+  if window.buttonDown[KeyLeftControl] and button == KeyO:
+    explorer.display = not explorer.display
+    
+    if explorer.display:
+      explorer.updateDir config.file
+
+  elif explorer.display:
+    explorer_onButtonDown(
+      button = button,
+      explorer = explorer,
+      path = config.file,
+      onFileOpen = (proc(file: string) =
+        reopen_file file
         explorer.display = false
-    else: discard
+      ),
+    )
 
   else:
     text_editor_onButtonDown(
       button,
       cursor
     )
-
-  if window.buttonDown[KeyLeftControl] and button == KeyO:
-    explorer.display = not explorer.display
   
-  discard explorer.move(MoveCommand.None, config.file, colors)
-
   display()
 
 
