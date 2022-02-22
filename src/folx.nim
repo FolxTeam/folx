@@ -94,10 +94,12 @@ doassert colors.len == lines.len
 
 
 var
-  pos = 0'f32
-  visual_pos = pos
   image = newImage(1280, 720)
   r = image.newContext
+
+  pos = 0'f32
+  visual_pos = pos
+  cursor = ivec2(0, 0)
 
 var explorer = Explorer(current_dir: "", item_index: 0, files: @[], display: false)
 
@@ -151,6 +153,7 @@ proc display =
       text = lines,
       colors = colors,
       indentation = text_indentation,
+      cursor = cursor,
     )
 
     r.status_bar(
@@ -192,22 +195,27 @@ window.onResize = proc =
   display()
 
 window.onButtonPress = proc(button: Button) =
-  
   if explorer.display:
-
-    if button == KeyDown:
+    case button
+    of KeyDown:
       discard explorer.move(MoveCommand.Down, config.file, colors)
-    if button == KeyUp:
+    of KeyUp:
       discard explorer.move(MoveCommand.Up, config.file, colors)
-    if button == KeyLeft:
+    of KeyLeft:
       discard explorer.move(MoveCommand.Left, config.file, colors)
-    if button == KeyRight:
+    of KeyRight:
       let new_path = explorer.move(MoveCommand.Right, config.file, colors)
       if new_path.isSome:
         update_file(new_path.get())
+    else: discard
+
+  else:
+    text_editor_onButtonDown(
+      button,
+      cursor
+    )
 
   if window.buttonDown[KeyLeftControl] and button == KeyO:
-    echo "Ctrl+O"
     explorer.display = not explorer.display
   
   discard explorer.move(MoveCommand.None, config.file, colors)

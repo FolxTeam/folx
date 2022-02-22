@@ -1,5 +1,5 @@
 import unicode, math
-import pixie
+import pixie, pixwindy
 import render, syntax_highlighting, configuration
 
 type
@@ -143,6 +143,7 @@ proc text_editor*(
   text: seq[seq[Rune]],
   colors: seq[seq[ColoredPos]],
   indentation: Indentation,
+  cursor: IVec2,
   ) =
   let
     size = (box.h / gt.font.size).ceil.int
@@ -172,7 +173,7 @@ proc text_editor*(
     box = rect(box.xy + vec2(line_number_width + 30, 0), box.wh - vec2(10, 0) - vec2(line_number_width + 30, 0)),
     gt = gt,
     pos = pos,
-    cpos = ivec2(5, pos.round.int32 + 5),
+    cpos = cursor,
     text = text,
   )
 
@@ -182,3 +183,19 @@ proc text_editor*(
     size = size,
     total = total + size - 1,
   )
+
+
+proc text_editor_onButtonDown*(
+  button: Button,
+  cursor: var IVec2,
+  ) =
+  case button
+  of KeyRight:
+    cursor.x += 1
+  of KeyLeft:
+    cursor.x -= 1
+  of KeyDown:
+    cursor.y += 1
+  of KeyUp:
+    cursor.y -= 1
+  else: discard
