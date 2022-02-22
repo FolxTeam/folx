@@ -61,6 +61,27 @@ proc vertical_line*(r: Image; x, y, h: int32, box: Rect, color: ColorRgb) =
   ):
     r.data[i] = rgbx(color.r, color.g, color.b, 255)
 
+proc clear*(image: Image, color: ColorRgbx) =
+  ## fill image (fast)
+  if image.data.len == 0:
+    return
+
+  let c = cast[uint64]([color, color])
+  var p = cast[int](image.data[0].addr)
+  var rem = image.data.len div 8
+  while rem != 0:
+    # parallel assignments
+    cast[ptr uint64](p)[] = c
+    cast[ptr uint64](p + 8)[] = c
+    cast[ptr uint64](p + 16)[] = c
+    cast[ptr uint64](p + 24)[] = c
+    dec rem
+    inc p, 32
+  
+  for _ in 1..(image.data.len mod 8):
+    cast[ptr ColorRgbx](p)[] = color
+    inc p, 4
+
 {.pop.}
 
 

@@ -116,7 +116,7 @@ proc animate(dt: float32): bool =
       pvp = (visual_pos * fontSize).round.int32  # visual position in pixels
       
       # position delta
-      d = (abs(pos - visual_pos) * sqrt(sqrt(sqrt(dt))) / 2).max(0.1).min(abs(pos - visual_pos))
+      d = (abs(pos - visual_pos) * pow(1 / 2, (1 / dt) / 50)).max(0.1).min(abs(pos - visual_pos))
 
     # move position by delta
     if pos > visual_pos: visual_pos += d
@@ -131,7 +131,7 @@ proc animate(dt: float32): bool =
 
 
 proc display =
-  image.fill colorTheme.textarea
+  image.clear colorTheme.textarea.color.rgbx
 
   if explorer.display:
     r.explorer_area(
