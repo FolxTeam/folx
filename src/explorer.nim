@@ -16,6 +16,23 @@ type
     display*: bool
 
 
+proc folderUpCmp*(x, y: explorer.File): int =
+  if (x.info.kind, y.info.kind) == (PathComponent.pcFile, PathComponent.pcDir): 1
+  else: -1
+
+proc folderDownCmp*(x, y: explorer.File): int =
+  if (x.info.kind, y.info.kind) == (PathComponent.pcDir, PathComponent.pcFile): 1
+  else: -1
+
+proc bySizeUpCmp*(x, y: explorer.File): int =
+  if x.info.size < y.info.size: 1
+  else: -1
+
+proc bySizeDownCmp*(x, y: explorer.File): int =
+  if x.info.size > y.info.size: 1
+  else: -1
+
+
 proc newFile(file_path: string): Option[File] =
   let (dir, name, ext) = splitFile(file_path)
   var info: FileInfo 

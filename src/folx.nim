@@ -1,4 +1,4 @@
-import os, times, math, sequtils, unicode, strutils, std/monotimes
+import os, times, math, sequtils, unicode, strutils, std/monotimes, std/algorithm
 import pixwindy, pixie
 import render, syntax_highlighting, configuration, text_editor, explorer
 
@@ -33,37 +33,34 @@ proc explorer_area(
   pos: float32,
   gt: var GlyphTable,
   bg: ColorRgb,
-  explorer: Explorer,
+  expl: var Explorer,
   ) =
 
   let dy = round(gt.font.size * 1.27)
-
   var y = box.y - dy * (pos mod 1)
 
   var max_file_length = 0
   var max_file_size: BiggestInt = 0
   
-  for file in explorer.files:
-    if (file.name & file.ext).len() > max_file_length:
-      max_file_length = (file.name & file.ext).len()
-    if file.info.size > max_file_size:
-      max_file_size = file.info.size
+  # todo: refactor long expressions
+  for file in expl.files:
+    max_file_length = if (file.name & file.ext).len() > max_file_length: (file.name & file.ext).len() else: max_file_length
+    max_file_size = if file.info.size > max_file_size: file.info.size else: max_file_size
 
+  # ! sorted on each component rerender | check if seq already sorted or take the sort to explorer.nim
+  sort(expl.files, explorer.folderUpCmp)
 
-  r.image.draw explorer.current_dir.toRunes, @[(sKeyword.color, 0)], vec2(box.x, y), box, gt, bg
-
+  r.image.draw expl.current_dir.toRunes, @[(sKeyword.color, 0)], vec2(box.x, y), box, gt, bg
   y += dy
 
-  for i in explorer.files.low..explorer.files.high:
-    let file = explorer.files[i]
-    var count_spaces_name = max_file_length + 1 - (file.name & file.ext).len()
-    var count_scapces_size = max_file_size.digits() + 1 - digits(file.info.size)
+  for i, file in expl.files.pairs:
+    let spaces_after_name = " ".repeat(max_file_length + 1 - (file.name & file.ext).len())
+    let spaces_after_size = " ".repeat(max_file_size.digits() + 1 - digits(file.info.size))
 
-    let text = file.name & file.ext & " ".repeat(count_spaces_name) & $file.info.size & " ".repeat(count_scapces_size) & $file.info.lastWriteTime.format("hh:mm dd/MM/yy")
-    if i == int(explorer.item_index):
+    let text = file.name & file.ext & spaces_after_name & $file.info.size & spaces_after_size & $file.info.lastWriteTime.format("hh:mm dd/MM/yy")
+    if i == int(expl.item_index):
       r.fillStyle = colorTheme.statusBarBg
       r.fillRect rect(vec2(0,y), vec2(text.toRunes.width(gt).float32, dy))
-
       r.image.draw toRunes(text), @[(rgb(0, 0, 0), 0)], vec2(box.x, y), box, gt, colorTheme.statusBarBg
 
     else:
@@ -72,6 +69,7 @@ proc explorer_area(
       else:
         r.image.draw text.toRunes, @[(sText.color, 0)], vec2(box.x, y), box, gt, bg
     y += dy
+    
 
 let window = newWindow("folx", config.window.size, visible=false)
 
@@ -141,7 +139,7 @@ proc display =
       pos = visual_pos,
       gt = editor_gt,
       bg = configuration.colorTheme.textarea,
-      explorer = main_explorer,
+      expl = main_explorer,
     )
   else:  
     r.text_editor(
