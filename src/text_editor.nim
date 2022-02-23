@@ -1,9 +1,9 @@
-import unicode, math
+import unicode, math, sequtils
 import pixie, pixwindy
 import render, syntax_highlighting, configuration
 
 type
-  Indentation = seq[tuple[len: seq[int], has_graph: bool]]
+  Indentation* = seq[tuple[len: seq[int], has_graph: bool]]
 
 
 proc bound[T](x: T, s: Slice[T]): T = x.max(s.a).min(s.b)
@@ -44,11 +44,11 @@ proc text_area(
   gt: var GlyphTable,
   pos: float32,
   bg: ColorRgb,
-  text: seq[seq[Rune]],
-  colors: seq[seq[ColoredPos]],
+  text: seq[Rune],
+  colors: seq[ColorRgb],
+  lineStarts: seq[int],
   indentation: Indentation,
   ) =
-  assert text.len == indentation.len
 
   let
     size = (box.h / gt.font.size).ceil.int
@@ -58,8 +58,14 @@ proc text_area(
   
   var y = box.y - dy * (pos mod 1)
 
-  for i in (pos.int..pos.ceil.int+size).bound(text.low..text.high):
-    r.image.draw text[i], colors[i], vec2(box.x, y), box, gt, bg
+  for i in (pos.int..pos.ceil.int+size).bound(0..lineStarts.high):
+    let
+      lineStart = lineStarts[i]
+      lineEnd =
+        if i == lineStarts.high: text.high
+        else: lineStarts[i + 1] - 1  # todo: \n and \r\n handling
+    
+    r.image.draw text.toOpenArray(lineStart, lineEnd), colors.toOpenArray(lineStart, lineEnd), vec2(box.x, y), box, gt, bg
 
     var x = box.x.round.int
     for i, l in indentation[i].len:
@@ -76,16 +82,16 @@ proc line_numbers(
   gt: var GlyphTable,
   pos: float32,
   bg: ColorRgb,
-  text: seq[seq[Rune]],
+  lineCount: int,
   ) =
   let
     size = (box.h / gt.font.size).ceil.int
 
   var y = round(box.y - gt.font.size * 1.27 * (pos mod 1))
-  for i in (pos.int..pos.ceil.int+size).bound(text.low..text.high):
+  for i in (pos.int..pos.ceil.int+size).bound(0..<lineCount):
     let s = toRunes $(i+1)
     let w = float32 s.width(gt)
-    r.image.draw s, @[(sLineNumber.color, 0)], vec2(box.x + box.w - w, y), box, gt, bg
+    r.image.draw s, sLineNumber.color.repeat(s.len), vec2(box.x + box.w - w, y), box, gt, bg
     y += round(gt.font.size * 1.27)
 
 
@@ -116,19 +122,25 @@ proc cursor(
   gt: var GlyphTable,
   pos: float32,
   cpos: IVec2,
-  text: seq[seq[Rune]],
+  text: seq[Rune],
+  lineStarts: seq[int],
   ) =
   if text.len == 0: return
-
-  let width = gt.font.size / 8
   
-  let y = cpos.y.int.bound(0..text.high)
-  let x = cpos.x.int.bound(0..text[y].len)
+  let
+    width = gt.font.size / 8
+    
+    y = cpos.y.int.bound(0..lineStarts.high)
+    lineStart = lineStarts[y]
+    lineEnd =
+      if y == lineStarts.high: text.high
+      else: lineStarts[y + 1] - 1  # todo: \n and \r\n handling
+    x = cpos.x.int.bound(0 .. lineEnd-lineStart)
 
   r.fillStyle = colorTheme.sElse
   r.fillRect rect(
     box.xy + vec2(
-      text[y][0 .. x-1].width(gt).float32 - width / 2,
+      text.toOpenArray(lineStart, x - 1).width(gt).float32 - width / 2,
       round(gt.font.size * 1.27) * (y.float32 - pos) + gt.font.size * 0.125
     ),
     vec2(width, gt.font.size)
@@ -142,8 +154,9 @@ proc text_editor*(
   gt: var GlyphTable,
   bg: ColorRgb,
   pos: float32,
-  text: seq[seq[Rune]],
-  colors: seq[seq[ColoredPos]],
+  text: seq[Rune],
+  colors: seq[ColorRgb],
+  lineStarts: seq[int],
   indentation: Indentation,
   cursor: IVec2,
   ) =
@@ -158,7 +171,7 @@ proc text_editor*(
     gt = gt,
     pos = pos,
     bg = colorTheme.textarea,
-    text = text,
+    lineCount = lineStarts.len,
   )
 
   r.text_area(
@@ -168,6 +181,7 @@ proc text_editor*(
     bg = colorTheme.textarea,
     text = text,
     colors = colors,
+    lineStarts = lineStarts,
     indentation = indentation,
   )
 
@@ -177,6 +191,7 @@ proc text_editor*(
     pos = pos,
     cpos = cursor,
     text = text,
+    lineStarts = lineStarts,
   )
 
   r.scroll_bar(

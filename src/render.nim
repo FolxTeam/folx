@@ -107,20 +107,16 @@ func clear*(gt: var GlyphTable) =
   clear gt.glyphs
 
 
-proc draw*(r: Image, text: seq[Rune], colors: seq[ColoredPos], pos: Vec2, box: Rect, gt: var GlyphTable, bg: ColorRgb) =
+proc draw*(r: Image, text: openarray[Rune], colors: openarray[ColorRgb], pos: Vec2, box: Rect, gt: var GlyphTable, bg: ColorRgb) =
   ## draw colored text
+  assert text.len == colors.len
+
   var (x, y, w, h) = (pos.x.round.int32, pos.y.round.int32, (box.w - pos.x + box.x).round.int32, (box.h - pos.y + box.y).round.int32)
   # todo: clip x (from start)
   let hd = max(box.y - pos.y, 0).round.int32
 
-  var i = 0
-  var ic = -1
-  var color: ColorRgb
-  for c in text:
-    defer: inc i, c.size
-    if colors.len > ic + 1 and colors[ic + 1].startPos == i:
-      inc ic
-      color = colors[ic].color
+  for i, c in text:
+    let color = colors[i]
     
     var glyph =
       try: gt.glyphs[(c, color, bg)]
@@ -147,7 +143,7 @@ proc draw*(r: Image, text: seq[Rune], colors: seq[ColoredPos], pos: Vec2, box: R
     if w <= 0: return
 
 
-proc width*(text: seq[Rune], gt: var GlyphTable): int32 =
+proc width*(text: openarray[Rune], gt: var GlyphTable): int32 =
   ## get width of text in pixels for font, specified in gt
   for c in text:
     if (c, rgb(0, 0, 0), rgb(0, 0, 0)) notin gt.glyphs: gt.render(c, rgb(0, 0, 0), rgb(0, 0, 0))

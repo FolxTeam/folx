@@ -3,6 +3,19 @@ import pixwindy, pixie
 import render, syntax_highlighting, configuration, text_editor, explorer
 
 
+proc lineStarts(s: seq[Rune]): seq[int] =
+  template rune(x): Rune = static(x.runeAt(0))
+  result = @[0]
+  var p = 0
+  while p < s.high:
+    if s[p] == "\n".rune:
+      result.add p + 1
+    elif s[p] == "\r".rune and p + 1 < s.high and s[p + 1] == "\n".rune:
+      result.add p + 1
+      inc p
+    inc p
+
+
 proc status_bar(
   r: Context,
   box: Rect,
@@ -15,29 +28,24 @@ proc status_bar(
   r.fillStyle = bg
   r.fillRect box
 
-  r.image.draw text, @[(sText.color, 0)], box.xy + margin, rect(box.xy, box.wh - margin), gt, bg
+  r.image.draw text, sText.color.repeat(text.len), box.xy + margin, rect(box.xy, box.wh - margin), gt, bg
 
 
 let window = newWindow("folx", config.window.size, visible=false)
-
-window.title = config.file & " - folx"
 
 var
   editor_gt    = readFont(config.font).newGlyphTable(config.fontSize)
   interface_gt = readFont(config.interfaceFont).newGlyphTable(config.interfaceFontSize)
 
-  text = config.file.readFile
+  text: string
+  runes: seq[Rune]
+  runesLineStarts: seq[int]
   
-  lines = text.splitLines.map(toRunes)
-  text_indentation = lines.indentation
-  colors = text.parseNimCode.map(color)
+  lines: seq[seq[Rune]]
+  text_indentation: Indentation
+  colors: seq[ColorRgb]
 
   displayRequest = false
-
-doassert colors.len == lines.len
-
-
-var
   image = newImage(1280, 720)
   r = image.newContext
 
@@ -45,15 +53,19 @@ var
   visual_pos = pos
   cursor = ivec2(0, 0)
 
-var main_explorer = Explorer(current_dir: "", item_index: 0, files: @[], display: false)
+  main_explorer = Explorer(current_dir: "", item_index: 0, files: @[], display: false)
 
-proc reopen_file*(file: string) =
+proc open_file*(file: string) =
   window.title = file & " - folx"
   text = file.readFile
-  colors = text.parseNimCode.map(color)
+  runes = text.toRunes
+  runesLineStarts = runes.lineStarts
+  colors = runes.parseNimCode(NimParseState(), runes.len).segments.colors
+  assert colors.len == runes.len
   lines = text.splitLines.map(toRunes)
   text_indentation = lines.indentation
-  doassert colors.len == lines.len
+
+open_file config.file
 
 proc animate(dt: float32): bool =
   if pos != visual_pos:
@@ -94,8 +106,9 @@ proc display =
       gt = editor_gt,
       pos = visual_pos,
       bg = colorTheme.textarea,
-      text = lines,
+      text = runes,
       colors = colors,
+      lineStarts = runesLineStarts,
       indentation = text_indentation,
       cursor = cursor,
     )
@@ -151,7 +164,7 @@ window.onButtonPress = proc(button: Button) =
       explorer = main_explorer,
       path = config.file,
       onFileOpen = (proc(file: string) =
-        reopen_file file
+        open_file file
         main_explorer.display = false
       ),
     )
