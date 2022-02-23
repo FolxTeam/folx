@@ -1,16 +1,7 @@
-import os, times, math, sequtils, unicode, strutils, std/monotimes, std/algorithm
+import os, times, math, sequtils, unicode, strutils, std/monotimes
 import pixwindy, pixie
 import render, syntax_highlighting, configuration, text_editor, explorer
 
-proc digits(x: BiggestInt): int =
-  var x = x
-  if x == 0:
-    return 1
-
-  while x != 0:
-    inc result
-    x = x div 10
-  
 
 proc status_bar(
   r: Context,
@@ -26,50 +17,6 @@ proc status_bar(
 
   r.image.draw text, @[(sText.color, 0)], box.xy + margin, rect(box.xy, box.wh - margin), gt, bg
 
-proc explorer_area(
-  r: Context,
-  image: Image,
-  box: Rect,
-  pos: float32,
-  gt: var GlyphTable,
-  bg: ColorRgb,
-  expl: var Explorer,
-  ) =
-
-  let dy = round(gt.font.size * 1.27)
-  var y = box.y - dy * (pos mod 1)
-
-  var max_file_length = 0
-  var max_file_size: BiggestInt = 0
-  
-  # todo: refactor long expressions
-  for file in expl.files:
-    max_file_length = if (file.name & file.ext).len() > max_file_length: (file.name & file.ext).len() else: max_file_length
-    max_file_size = if file.info.size > max_file_size: file.info.size else: max_file_size
-
-  # ! sorted on each component rerender | check if seq already sorted or take the sort to explorer.nim
-  sort(expl.files, explorer.folderUpCmp)
-
-  r.image.draw expl.current_dir.toRunes, @[(sKeyword.color, 0)], vec2(box.x, y), box, gt, bg
-  y += dy
-
-  for i, file in expl.files.pairs:
-    let spaces_after_name = " ".repeat(max_file_length + 1 - (file.name & file.ext).len())
-    let spaces_after_size = " ".repeat(max_file_size.digits() + 1 - digits(file.info.size))
-
-    let text = file.name & file.ext & spaces_after_name & $file.info.size & spaces_after_size & $file.info.lastWriteTime.format("hh:mm dd/MM/yy")
-    if i == int(expl.item_index):
-      r.fillStyle = colorTheme.statusBarBg
-      r.fillRect rect(vec2(0,y), vec2(text.toRunes.width(gt).float32, dy))
-      r.image.draw toRunes(text), @[(rgb(0, 0, 0), 0)], vec2(box.x, y), box, gt, colorTheme.statusBarBg
-
-    else:
-      if file.info.kind == PathComponent.pcDir:
-        r.image.draw text.toRunes, @[(sStringLitEscape.color, 0)], vec2(box.x, y), box, gt, bg
-      else:
-        r.image.draw text.toRunes, @[(sText.color, 0)], vec2(box.x, y), box, gt, bg
-    y += dy
-    
 
 let window = newWindow("folx", config.window.size, visible=false)
 
