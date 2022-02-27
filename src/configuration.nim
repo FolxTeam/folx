@@ -23,6 +23,7 @@ type
     scrollbar*: ColorRGB
     verticalline*: ColorRGB
     linenumbers*: ColorRGB
+    linenumbersselect*: ColorRGB
     textarea*: ColorRGB
     statusBarBg*: ColorRGB
 
@@ -87,6 +88,7 @@ const defaultColorTheme = ColorTheme(
   scrollbar: rgb(48, 48, 48),
   verticalline: rgb(64, 64, 64),
   linenumbers: rgb(32, 32, 32),
+  linenumbersselect: rgb(15, 15, 15),
   textarea: rgb(32, 32, 32),
   statusBarBg: rgb(0, 122, 204),
 
