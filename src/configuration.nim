@@ -1,4 +1,4 @@
-import json
+import json, os
 import jsony, pixie
 
 type
@@ -14,6 +14,7 @@ type
     window*: WindowConfig
 
     file*: string
+    workspace*: string
 
   WindowConfig* = object
     size*: IVec2
@@ -77,6 +78,7 @@ const defaultConfig = Config(
   ),
 
   file: "src/folx.nim",
+  workspace: getHomeDir()
 )
 static: writeFile "config.default.json", defaultConfig.toJson.parseJson.pretty
 
