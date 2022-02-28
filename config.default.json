@@ -10,5 +10,6 @@
       720
     ]
   },
-  "file": "src/folx.nim"
+  "file": "src/folx.nim",
+  "workspace": "/home/levovix/"
 }

@@ -83,15 +83,22 @@ proc line_numbers(
   pos: float32,
   bg: ColorRgb,
   lineCount: int,
+  cursor: IVec2,
+  total: int,
   ) =
   let
     size = (box.h / gt.font.size).ceil.int
-
+    dy = round(gt.font.size * 1.27)
   var y = round(box.y - gt.font.size * 1.27 * (pos mod 1))
   for i in (pos.int..pos.ceil.int+size).bound(0..<lineCount):
     let s = toRunes $(i+1)
     let w = float32 s.width(gt)
-    r.image.draw s, sLineNumber.color, vec2(box.x + box.w - w, y), box, gt, bg
+    if i == cursor.y:
+      r.fillStyle = colorTheme.linenumbersselect.color
+      r.fillRect rect(vec2(0,y), vec2(box.w, dy))
+      r.image.draw s, sLineNumber.color, vec2((box.x + box.w + toRunes($total).width(gt).float32  ) / 2 - w, y), box, gt, colorTheme.linenumbersselect
+    else:
+      r.image.draw s, sLineNumber.color, vec2((box.x + box.w + toRunes($total).width(gt).float32  ) / 2 - w, y), box, gt, bg
     y += round(gt.font.size * 1.27)
 
 
@@ -136,11 +143,11 @@ proc cursor(
       if y == lineStarts.high: text.high
       else: lineStarts[y + 1] - 1  # todo: \n and \r\n handling
     x = cpos.x.int.bound(0 .. lineEnd-lineStart)
-
+  
   r.fillStyle = colorTheme.sText
   r.fillRect rect(
     box.xy + vec2(
-      text.toOpenArray(lineStart, x - 1).width(gt).float32 - width / 2,
+      text.toOpenArray(lineStart, lineStart + x - 1).width(gt).float32 - width / 2,
       round(gt.font.size * 1.27) * (y.float32 - pos) + gt.font.size * 0.125
     ),
     vec2(width, gt.font.size)
@@ -167,15 +174,17 @@ proc text_editor*(
     line_number_width = float32 ($total).toRunes.width(gt)
   
   r.line_numbers(
-    box = rect(box.xy + vec2(10, 0), vec2(line_number_width, box.h)),
+    box = rect(box.xy + vec2(0, 0), vec2(line_number_width + 20, box.h)),
     gt = gt,
     pos = pos,
     bg = colorTheme.textarea,
     lineCount = total,
+    cursor = cursor,
+    total = total,
   )
 
   r.text_area(
-    box = rect(box.xy + vec2(line_number_width + 30, 0), box.wh - vec2(10, 0) - vec2(line_number_width + 30, 0)),
+    box = rect(box.xy + vec2(line_number_width + 20, 0), box.wh - vec2(10, 0) - vec2(line_number_width + 20, 0)),
     gt = gt,
     pos = pos,
     bg = colorTheme.textarea,
@@ -186,7 +195,7 @@ proc text_editor*(
   )
 
   r.cursor(
-    box = rect(box.xy + vec2(line_number_width + 30, 0), box.wh - vec2(10, 0) - vec2(line_number_width + 30, 0)),
+    box = rect(box.xy + vec2(line_number_width + 20, 0), box.wh - vec2(10, 0) - vec2(line_number_width + 20, 0)),
     gt = gt,
     pos = pos,
     cpos = cursor,

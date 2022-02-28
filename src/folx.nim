@@ -1,6 +1,6 @@
 import os, times, math, sequtils, unicode, strutils, std/monotimes
 import pixwindy, pixie
-import render, syntax_highlighting, configuration, text_editor, explorer
+import render, syntax_highlighting, configuration, text_editor, side_explorer
 
 
 proc lineStarts(s: seq[Rune]): seq[int] =
@@ -53,7 +53,7 @@ var
   visual_pos = pos
   cursor = ivec2(0, 0)
 
-  main_explorer = Explorer(current_dir: "", item_index: 0, files: @[], display: false)
+var main_explorer = SideExplorer(current_dir: config.workspace, item_index: 1, display: false)
 
 proc open_file*(file: string) =
   window.title = file & " - folx"
@@ -92,13 +92,25 @@ proc display =
   image.clear colorTheme.textarea.color.rgbx
 
   if main_explorer.display:
-    r.explorer_area(
+
+    var box = rect(vec2(0, 0), window.size.vec2 - vec2(10, 20))
+    var dy = round(editor_gt.font.size * 1.27)
+    var y = box.y - dy * (pos mod 1)
+
+    r.image.draw toRunes(main_explorer.dir.path), sKeyword.color, vec2(box.x, y), box, editor_gt, configuration.colorTheme.textarea
+    y += dy
+
+    r.side_explorer_area(
       image = image,
-      box = rect(vec2(0, 0), window.size.vec2 - vec2(10, 20)),
+      box = box,
       pos = visual_pos,
       gt = editor_gt,
       bg = configuration.colorTheme.textarea,
-      expl = main_explorer,
+      dir = main_explorer.dir,
+      explorer = main_explorer,
+      count_items = 0,
+      y = y,
+      nesting = 0,
     )
   else:  
     r.text_editor(
@@ -142,7 +154,9 @@ window.onScroll = proc =
     clear editor_gt
     displayRequest = true
   else:
-    pos = (pos - window.scrollDelta.y * 3).max(0).min(lines.high.float32)
+    let lines_count = if main_explorer.display: main_explorer.count_items.float32 else: lines.high.float32
+    pos = (pos - window.scrollDelta.y * 3).max(0).min(lines_count)
+
 
 
 window.onResize = proc =
@@ -159,7 +173,7 @@ window.onButtonPress = proc(button: Button) =
       main_explorer.updateDir config.file
 
   elif main_explorer.display:
-    explorer_onButtonDown(
+    side_explorer_onButtonDown(
       button = button,
       explorer = main_explorer,
       path = config.file,
@@ -171,8 +185,8 @@ window.onButtonPress = proc(button: Button) =
 
   else:
     text_editor_onButtonDown(
-      button,
-      cursor,
+      button = button,
+      cursor = cursor,
       text = lines,
     )
   

@@ -1,4 +1,4 @@
-import json
+import json, os
 import jsony, pixie
 
 type
@@ -14,6 +14,7 @@ type
     window*: WindowConfig
 
     file*: string
+    workspace*: string
 
   WindowConfig* = object
     size*: IVec2
@@ -22,6 +23,7 @@ type
     scrollbar*: ColorRGB
     verticalline*: ColorRGB
     linenumbers*: ColorRGB
+    linenumbersselect*: ColorRGB
     textarea*: ColorRGB
     statusBarBg*: ColorRGB
 
@@ -80,6 +82,7 @@ const defaultConfig = Config(
   ),
 
   file: "src/folx.nim",
+  workspace: getHomeDir()
 )
 static: writeFile "config.default.json", defaultConfig.toJson.parseJson.pretty
 
@@ -88,6 +91,7 @@ const defaultColorTheme = ColorTheme(
   scrollbar: rgb(48, 48, 48),
   verticalline: rgb(64, 64, 64),
   linenumbers: rgb(32, 32, 32),
+  linenumbersselect: rgb(15, 15, 15),
   textarea: rgb(32, 32, 32),
   statusBarBg: rgb(0, 122, 204),
 

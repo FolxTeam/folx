@@ -15,3 +15,4 @@ nimcache
 __pycache__
 bindings/generated
 config.json
+config.default.json
