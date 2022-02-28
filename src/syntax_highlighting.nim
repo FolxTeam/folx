@@ -127,7 +127,7 @@ proc parseNimCode*(s: seq[Rune], state: NimParseState, len = 100): tuple[segment
             "int", "float", "string", "bool", "byte", "uint", "seq", "set", "char", "void", "auto", "any":
             sBuiltinType
         
-          elif exist(l) and peek(l) == "(".rune:
+          elif exist(l) and (peek(l) == "(".rune or peek(l) == "\"".rune):
             sFunction
         
           else: sText
@@ -188,10 +188,48 @@ proc parseNimCode*(s: seq[Rune], state: NimParseState, len = 100): tuple[segment
       if isTodo: add sTodoComment, l
       else:      add sComment, l
     
+    template number =
+      var l = 1
+      var wasDot: bool
+      var wasQuote: bool
+      var digits = "0123456789_".runes
+
+      if (peek(0) == rune"0") and ((peek(l) == rune"x") or (peek(l) == rune"X")) and exist(l + 1) and (peek(l + 1) in "0123456789abcdefABCDEF_".runes):
+        inc l
+        digits = "0123456789abcdefABCDEF_".runes
+      
+      elif (peek(0) == rune"0") and ((peek(l) == rune"o") or (peek(l) == rune"O")) and exist(l + 1) and (peek(l + 1) in "01234567_".runes):
+        inc l
+        digits = "01234567_".runes
+      
+      elif (peek(0) == rune"0") and ((peek(l) == rune"b") or (peek(l) == rune"B")) and exist(l + 1) and (peek(l + 1) in "01_".runes):
+        inc l
+        digits = "01_".runes
+
+      while true:
+        if not exist(l): break
+        let r = peek(l)
+        if wasQuote:
+          if (not r.isAlpha) and (r notin "0123456789_".runes):
+            break
+        else:
+          if (not wasDot) and (r == rune"."):
+            wasDot = true
+          elif (not wasDot) and (r == rune"'") and exist(l + 1) and (peek(l + 1).isAlpha):
+            wasQuote = true
+          elif (r notin digits):
+            break
+        inc l
+      
+      add sNumberLit, l
+      # todo: errors in numbers
+
     let r = peek()
-    if r.isAlpha:      ident
-    elif r == rune"#": comment
-    else:              add sText
+    if r.isAlpha:                 ident
+    elif r in "0123456789".runes: number
+    elif r == rune"#":            comment
+    else:
+      add sText
     
     # todo: operators
 
@@ -201,17 +239,7 @@ proc parseNimCode*(s: seq[Rune], state: NimParseState, len = 100): tuple[segment
     s.parseNext(result.state, result.segments)
 
 
-#   let parser = peg("segments", d: seq[seq[CodeSegment]]):    
-#     bdigit        <- {'0'..'1'}
-#     odigit        <- {'0'..'7'}
-#     binNumber     <- bdigit * *(bdigit|'_') * ?('.' * bdigit * *(bdigit|'_')) * ?('\'' * ident)
-#     octNumber     <- odigit * *(odigit|'_') * ?('.' * odigit * *(odigit|'_')) * ?('\'' * ident)
-#     hexNumber     <- Xdigit * *(Xdigit|'_') * ?('.' * Xdigit * *(Xdigit|'_')) * ?('\'' * ident)
-#     classicNumber <- Digit * *(Digit|'_') * ?('.' * Digit * *(Digit|'_')) * ?('\'' * ident)
-#     number        <- >(("0b" * binNumber) | ("0o" * octNumber) | ("0x" * hexNumber) | classicNumber):
-#       d[^1].add (kind: sNumberLit, startPos: i)
-#       inc i, len $1
-    
+#   let parser = peg("segments", d: seq[seq[CodeSegment]]):
 #     unicodeEscape <- 'u' * Xdigit[4]
 #     xEscape       <- 'x' * Xdigit[2]
 #     escape        <- '\\' * ({ '{', '"', '\'', '|', '\\', 'b', 'f', 'n', 'r', 't' } | unicodeEscape | xEscape)
