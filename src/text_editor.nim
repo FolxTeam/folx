@@ -137,7 +137,7 @@ proc cursor(
       else: lineStarts[y + 1] - 1  # todo: \n and \r\n handling
     x = cpos.x.int.bound(0 .. lineEnd-lineStart)
 
-  r.fillStyle = colorTheme.sElse
+  r.fillStyle = colorTheme.sText
   r.fillRect rect(
     box.xy + vec2(
       text.toOpenArray(lineStart, x - 1).width(gt).float32 - width / 2,

@@ -36,8 +36,11 @@ type
     sFunction*: ColorRGB
     sComment*: ColorRGB
     sTodoComment*: ColorRGB
+    sError*: ColorRGB
+    
     sLineNumber*: ColorRGB
-    sElse*: ColorRGB
+    
+    sText*: ColorRGB
 
 
 proc parseHook*[T](s: string, i: var int, v: var GVec2[T]) =
@@ -100,7 +103,8 @@ const defaultColorTheme = ColorTheme(
   sComment: rgb(106, 153, 85),
   sTodoComment: rgb(255, 140, 0),
   sLineNumber: rgb(133, 133, 133),
-  sElse: rgb(212, 212, 212),
+  sError: rgb(255, 64, 64),
+  sText: rgb(212, 212, 212),
 )
 static: writeFile "resources/themes/default.json", defaultColorTheme.toJson.parseJson.pretty
 

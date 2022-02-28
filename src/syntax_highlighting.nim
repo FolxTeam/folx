@@ -18,6 +18,7 @@ type
     sStringLit
     sCharLit
     sNumberLit
+    sError
 
     sStringLitEscape
     sCharLitEscape
@@ -34,6 +35,7 @@ type
 
 
 proc color*(sk: CodeKind): ColorRGB =
+  ## todo: move from syntax_highlighting
   case sk
   of sKeyword, sOperatorWord, sBuiltinType:
     colorTheme.sKeyword
@@ -65,18 +67,21 @@ proc color*(sk: CodeKind): ColorRGB =
   of sLineNumber:
     colorTheme.sLineNumber
   
-  else: colorTheme.sElse
+  of sError:
+    colorTheme.sError
+  
+  else: colorTheme.sText
 
 proc colors*(scs: openarray[CodeKind]): seq[ColorRgb] =
   scs.map(color)
 
 
 
-proc parseNimCode*(s: seq[Rune], state: NimParseState, len = 100): tuple[segments: seq[CodeKind], state: NimParseState] =
+proc parseNimCode*(s: openarray[Rune], state: NimParseState, len = 100): tuple[segments: seq[CodeKind], state: NimParseState] =
   result.state = state
-  result.segments = newSeqOfCap[CodeKind](len)
+  result.segments = newSeq[CodeKind](len)
 
-  proc parseNext(s: seq[Rune], state: var NimParseState, res: var seq[CodeKind]) =
+  proc parseNext(s: openarray[Rune], state: var NimParseState, res: var seq[CodeKind]) =
     template rune(s: string): Rune = static(s.runeAt(0))
     template runes(s: string): seq[Rune] = static(s.toRunes)
     
@@ -91,9 +96,15 @@ proc parseNimCode*(s: seq[Rune], state: NimParseState, len = 100): tuple[segment
     
     template add(kind: CodeKind, len: int = 1) =
       let i = len
-      for _ in 1..i:
-        res.add kind
+      for j in state.pos ..< state.pos + i:
+        res[j] = kind
       skip i
+    
+    template set(kind: CodeKind, p: int, len: int = 1) =
+      let pp = p
+      let i = len
+      for j in state.pos + pp ..< state.pos + pp + i:
+        res[j] = kind
     
     template ident =
       var l = 1
@@ -224,10 +235,112 @@ proc parseNimCode*(s: seq[Rune], state: NimParseState, len = 100): tuple[segment
       add sNumberLit, l
       # todo: errors in numbers
 
+    template escape(r, l, onError, onEscape) {.dirty.} =
+      if r == "\\".rune:
+        inc l
+
+        template nishex(i): bool = exist(l + i) and peek(l + i) in "0123456789abcdefABCDEF".runes
+
+        if exist(l) and peek(l) in "nrt\\0'\"?abfv".runes:
+          let n {.used.} = 2
+          onEscape
+          inc l
+          continue
+        
+        elif exist(l) and peek(l) == rune"X":
+          if nishex(1) and nishex(2):
+              let n {.used.} = 4
+              onEscape
+              inc l, 3
+              continue
+          onError
+        
+        elif exist(l) and peek(l) == rune"u":
+          if nishex(1) and nishex(2) and nishex(3) and nishex(4):
+              let n {.used.} = 6
+              onEscape
+              inc l, 5
+              continue
+          onError
+        
+        elif exist(l) and peek(l) == rune"U":
+          if nishex(1) and nishex(2) and nishex(3) and nishex(4) and nishex(5) and nishex(6) and nishex(7) and nishex(8):
+              let n {.used.} = 10
+              onEscape
+              inc l, 9
+              continue
+          onError
+        
+        elif exist(l) and peek(l) in "012".runes:
+          if exist(l + 1) and peek(l + 1) in "012345".runes:
+            if exist(l + 2) and peek(l + 2) in "0123456789".runes:
+              let n {.used.} = 4
+              onEscape
+              inc l, 3
+              continue
+          onError
+        
+        else:
+          onError
+
+    template str =
+      var l = 1
+      var isError: bool
+      var sets: seq[(CodeKind, int, int)]
+      
+      while true:
+        if not exist(l): isError = true; break
+        let r = peek(l)
+        escape(r, l) do:
+          sets.add (sError, l - 1, 2)
+        do:
+          sets.add (sStringLitEscape, l - 1, n)
+        inc l
+        if r == "\"".rune: break
+        if r == "\n".rune: isError = true; break
+      
+      if isError:
+        add sError, l
+      else:
+        add sStringLit, l
+        skip -l
+        for (k, p, n) in sets:
+          set k, p, n
+        skip l
+      # todo: multiline strings
+      # todo: raw strings
+
+    template chr =
+      var l = 1
+      var isError: bool
+      var isEscape: bool
+      
+      while true:
+        if not exist(l): isError = true; break
+        let r = peek(l)
+        escape(r, l) do:
+          isError = true
+        do:
+          if isEscape: isError = true
+          isEscape = true
+        inc l
+        if r == rune"'": break
+        if r == "\n".rune: isError = true; break
+        if l > 2: isError = true
+      
+      if isError:
+        add sError, l
+      elif isEscape:
+        add sStringLitEscape, l
+      else:
+        add sStringLit, l
+
     let r = peek()
     if r.isAlpha:                 ident
-    elif r in "0123456789".runes: number
+    elif r == "\"".rune:          str
+    elif r == rune"'":            chr
     elif r == rune"#":            comment
+    elif r in "0123456789".runes: number
     else:
       add sText
     
@@ -237,35 +350,3 @@ proc parseNimCode*(s: seq[Rune], state: NimParseState, len = 100): tuple[segment
   for _ in 1..len:
     if result.state.pos > s.high: return
     s.parseNext(result.state, result.segments)
-
-
-#   let parser = peg("segments", d: seq[seq[CodeSegment]]):
-#     unicodeEscape <- 'u' * Xdigit[4]
-#     xEscape       <- 'x' * Xdigit[2]
-#     escape        <- '\\' * ({ '{', '"', '\'', '|', '\\', 'b', 'f', 'n', 'r', 't' } | unicodeEscape | xEscape)
-
-#     stringEscape  <- >escape:
-#       add sStringLitEscape
-#       inc i, len $1
-#     stringChar    <- >(utf8.any - '"' - '\\' - {0..31}):
-#       add sStringLit
-#       inc i, len $1
-#     stringStart   <- '"':
-#       add sStringLit
-#       inc i
-#     string        <- stringStart * *(stringEscape|stringChar) * '"':
-#       add sStringLit
-#       inc i
-    
-#     charEscape  <- >escape:
-#       add sCharLitEscape
-#       inc i, len $1
-#     charChar    <- >(utf8.any - '\'' - '\\' - {0..31}):
-#       add sCharLit
-#       inc i, len $1
-#     charStart   <- '\'':
-#       add sCharLit
-#       inc i
-#     charLit     <- charStart * *(charEscape|charChar) * '\'':
-#       add sCharLit
-#       inc i
