@@ -1,6 +1,5 @@
-import tables, unicode
+import tables, unicode, sequtils
 import pixie
-import syntax_highlighting
 
 type
   GlyphTable* = object
@@ -141,6 +140,10 @@ proc draw*(r: Image, text: openarray[Rune], colors: openarray[ColorRgb], pos: Ve
     x += bx
     w -= bx
     if w <= 0: return
+
+
+proc draw*(r: Image, text: openarray[Rune], color: ColorRgb, pos: Vec2, box: Rect, gt: var GlyphTable, bg: ColorRgb) =
+  r.draw text, color.repeat(text.len), pos, box, gt, bg
 
 
 proc width*(text: openarray[Rune], gt: var GlyphTable): int32 =

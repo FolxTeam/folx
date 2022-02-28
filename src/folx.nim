@@ -28,7 +28,7 @@ proc status_bar(
   r.fillStyle = bg
   r.fillRect box
 
-  r.image.draw text, sText.color.repeat(text.len), box.xy + margin, rect(box.xy, box.wh - margin), gt, bg
+  r.image.draw text, sText.color, box.xy + margin, rect(box.xy, box.wh - margin), gt, bg
 
 
 let window = newWindow("folx", config.window.size, visible=false)

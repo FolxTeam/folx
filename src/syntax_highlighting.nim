@@ -1,9 +1,9 @@
-import strutils, sequtils, unicode, streams
-import pixie, npeg, npeg/lib/utf8
+import sequtils, unicode, streams
+import pixie
 import configuration
 
 type
-  CodeSegmentKind* = enum
+  CodeKind* = enum
     sText
 
     sComment
@@ -25,23 +25,15 @@ type
     sTodoComment
 
     sLineNumber
-  
-  CodeSegment* = tuple
-    kind: CodeSegmentKind
-    startPos: int
 
-  ColoredPos* = tuple
-    color: ColorRgb
-    startPos: int
-  
   NimParseState* = object
     pos: int
-    last: tuple[kind: CodeSegmentKind, pos: int]
+    last: CodeKind
     inQuote, inComment: bool
     inMultiline: bool
 
 
-proc color*(sk: CodeSegmentKind): ColorRGB =
+proc color*(sk: CodeKind): ColorRGB =
   case sk
   of sKeyword, sOperatorWord, sBuiltinType:
     colorTheme.sKeyword
@@ -75,41 +67,77 @@ proc color*(sk: CodeSegmentKind): ColorRGB =
   
   else: colorTheme.sElse
 
-# proc color*(scs: seq[CodeSegment]): seq[ColoredPos] =
-#   scs.mapit((color: it.kind.color, startPos: it.startPos))
-
-proc colors*(scs: openarray[CodeSegment]): seq[ColorRgb] =
-  scs.mapit(it.kind.color)
+proc colors*(scs: openarray[CodeKind]): seq[ColorRgb] =
+  scs.map(color)
 
 
 
-proc parseNimCode*(s: seq[Rune], state: NimParseState, len = 100): tuple[segments: seq[CodeSegment], state: NimParseState] =
+proc parseNimCode*(s: seq[Rune], state: NimParseState, len = 100): tuple[segments: seq[CodeKind], state: NimParseState] =
   result.state = state
+  result.segments = newSeqOfCap[CodeKind](len)
 
-  proc parseNext(s: seq[Rune], state: var NimParseState, res: var seq[CodeSegment]) =
+  proc parseNext(s: seq[Rune], state: var NimParseState, res: var seq[CodeKind]) =
+    template rune(s: string): Rune = static(s.runeAt(0))
+    template runes(s: string): seq[Rune] = static(s.toRunes)
+    
     template peek(i: int = 0): Rune =
       s[state.pos + i]
     
     template skip(n: int = 1) =
       inc state.pos, n
     
-    template add(kind: CodeSegmentKind) =
-      res.add (kind, state.pos)
-      skip 1
+    template exist(n: int): bool =
+      state.pos + n < s.len
+    
+    template add(kind: CodeKind, len: int = 1) =
+      let i = len
+      for _ in 1..i:
+        res.add kind
+      skip i
     
     template ident() =
-      add sKeyword
+      var l = 1
       
       while true:
-        if state.pos > s.high: break
-        let r = peek()
-        if not r.isAlpha: break
-        add sKeyword
+        if not exist(l): break
+        let r = peek(l)
+        if (not r.isAlpha) and (r notin "0123456789_".runes): break
+        inc l
+
+      let kind =
+        if peek().isUpper:
+          sType
+
+        else:
+          case $s[state.pos ..< state.pos + l]
+          of "func", "proc", "template", "iterator", "converter", "macro", "method", 
+            "addr", "asm", "bind", "concept", "const", "discard", "distinct", "enum", "export", "from", 
+            "import", "include", "interface", "let", "mixin", "nil", "object", "of", "out", "ptr", 
+            "ref", "static", "tuple", "type", "using", "var", "true", "false", "off", "on", "low", "high", "lent":
+            sKeyword
+
+          of "block", "break", "case", "continue", "defer", "do", "elif", "else", "end", "except", 
+            "finally", "for", "if", "raise", "return", "try", "when", "while", "yield":
+            sControlFlow
+          
+          of "and", "as", "cast", "div", "in", "isnot", "is", "mod", "notin", "not", "or", "shl", "shr", "xor":
+            sOperatorWord
+          
+          of "int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "uint64", "float32", "float64", 
+            "int", "float", "string", "bool", "byte", "uint", "seq", "set", "char", "void", "auto", "any":
+            sBuiltinType
+        
+          elif exist(l) and peek(l) == "(".rune:
+            sFunction
+        
+          else: sText
+      
+      add kind, l
     
     let r = peek()
     if r.isAlpha: ident
     else:         add sText
-    
+
   
   for _ in 1..len:
     if result.state.pos > s.high: return
@@ -128,26 +156,6 @@ proc parseNimCode*(s: seq[Rune], state: NimParseState, len = 100): tuple[segment
 
 #   let parser = peg("segments", d: seq[seq[CodeSegment]]):
 #     ident <- utf8.alpha * *(utf8.alpha|Digit|'_')
-
-#     word <- >ident:
-#       let s = $1
-#       let kind = case s
-#       of "func", "proc", "template", "iterator", "converter", "macro", "method", 
-#         "addr", "asm", "bind", "concept", "const", "discard", "distinct", "enum", "export", "from", 
-#         "import", "include", "interface", "let", "mixin", "nil", "object", "of", "out", "ptr", 
-#         "ref", "static", "tuple", "type", "using", "var", "true", "false", "off", "on", "low", "high", "lent":
-#         sKeyword
-#       of "block", "break", "case", "continue", "defer", "do", "elif", "else", "end", "except", 
-#         "finally", "for", "if", "raise", "return", "try", "when", "while", "yield":
-#         sControlFlow
-#       of "and", "as", "cast", "div", "in", "isnot", "is", "mod", "notin", "not", "or", "shl", "shr", "xor":
-#         sOperatorWord
-#       of "int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "uint64", "float32", "float64", 
-#         "int", "float", "string", "bool", "byte", "uint", "seq", "set", "char", "void", "auto", "any":
-#         sBuiltinType
-#       else: sText
-#       add kind
-#       inc i, len s
     
 #     operator       <- >+(Graph - (Alnum|'"'|'\''|'`')):
 #       add sOperator

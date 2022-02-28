@@ -1,4 +1,4 @@
-import unicode, math, sequtils
+import unicode, math
 import pixie, pixwindy
 import render, syntax_highlighting, configuration
 
@@ -91,7 +91,7 @@ proc line_numbers(
   for i in (pos.int..pos.ceil.int+size).bound(0..<lineCount):
     let s = toRunes $(i+1)
     let w = float32 s.width(gt)
-    r.image.draw s, sLineNumber.color.repeat(s.len), vec2(box.x + box.w - w, y), box, gt, bg
+    r.image.draw s, sLineNumber.color, vec2(box.x + box.w - w, y), box, gt, bg
     y += round(gt.font.size * 1.27)
 
 
@@ -162,7 +162,7 @@ proc text_editor*(
   ) =
   let
     size = (box.h / gt.font.size).ceil.int
-    total = text.len
+    total = lineStarts.len
 
     line_number_width = float32 ($total).toRunes.width(gt)
   
@@ -171,7 +171,7 @@ proc text_editor*(
     gt = gt,
     pos = pos,
     bg = colorTheme.textarea,
-    lineCount = lineStarts.len,
+    lineCount = total,
   )
 
   r.text_area(

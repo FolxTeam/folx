@@ -1,4 +1,4 @@
-import std/options, os, std/unicode, math, strutils, sequtils
+import std/options, os, std/unicode, math, strutils
 import pixwindy, pixie, std/algorithm, times
 import render, syntax_highlighting, configuration
 
@@ -139,7 +139,7 @@ proc explorer_area*(
   # ! sorted on each component rerender | check if seq already sorted or take the sort to updateDir
   sort(expl.files, folderUpCmp)
 
-  r.image.draw expl.current_dir.toRunes, sKeyword.color.repeat(expl.current_dir.runeLen), vec2(box.x, y), box, gt, bg
+  r.image.draw expl.current_dir.toRunes, sKeyword.color, vec2(box.x, y), box, gt, bg
   y += dy
 
   for i, file in expl.files.pairs:
@@ -150,11 +150,11 @@ proc explorer_area*(
     if i == int(expl.item_index):
       r.fillStyle = colorTheme.statusBarBg
       r.fillRect rect(vec2(0,y), vec2(text.toRunes.width(gt).float32, dy))
-      r.image.draw toRunes(text), rgb(0, 0, 0).repeat(text.runeLen), vec2(box.x, y), box, gt, colorTheme.statusBarBg
+      r.image.draw toRunes(text), rgb(0, 0, 0), vec2(box.x, y), box, gt, colorTheme.statusBarBg
 
     else:
       if file.info.kind == PathComponent.pcDir:
-        r.image.draw text.toRunes, sStringLitEscape.color.repeat(text.runeLen), vec2(box.x, y), box, gt, bg
+        r.image.draw text.toRunes, sStringLitEscape.color, vec2(box.x, y), box, gt, bg
       else:
-        r.image.draw text.toRunes, sText.color.repeat(text.runeLen), vec2(box.x, y), box, gt, bg
+        r.image.draw text.toRunes, sText.color, vec2(box.x, y), box, gt, bg
     y += dy
