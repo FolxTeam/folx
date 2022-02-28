@@ -95,7 +95,7 @@ proc parseNimCode*(s: seq[Rune], state: NimParseState, len = 100): tuple[segment
         res.add kind
       skip i
     
-    template ident() =
+    template ident =
       var l = 1
       
       while true:
@@ -134,9 +134,66 @@ proc parseNimCode*(s: seq[Rune], state: NimParseState, len = 100): tuple[segment
       
       add kind, l
     
+    template comment =
+      var l = 1
+      var isTodo: bool
+      var wasAlpha: bool
+
+      template checkTodo =
+        if (not wasAlpha) and (not isTodo) and (
+          (peek(l).toLower == rune"t") and
+          (exist(l + 1) and peek(l + 1).toLower == rune"o") and
+          (exist(l + 2) and peek(l + 2).toLower == rune"d") and
+          (exist(l + 3) and peek(l + 3).toLower == rune"o") and
+          (exist(l + 4) and (not peek(l + 4).isAlpha))
+        ):
+          isTodo = true
+          inc l, 4
+          continue
+
+        elif (not wasAlpha) and (not isTodo) and (
+          (peek(l).toLower == rune"t") and
+          (exist(l + 1) and peek(l + 1).toLower == rune"o") and
+          (exist(l + 2) and peek(l + 2).isWhiteSpace) and
+          (exist(l + 3) and peek(l + 3).toLower == rune"d") and
+          (exist(l + 4) and peek(l + 4).toLower == rune"o") and
+          (exist(l + 5) and (not peek(l + 5).isAlpha))
+        ):
+          isTodo = true
+          inc l, 5
+          continue
+      
+      if exist(l) and peek(l) == rune"[":  # multiline comment
+        while true:
+          if not exist(l): break
+          checkTodo
+          if (
+            (peek(l) == rune"]") and
+            (exist(l + 1) and peek(l + 1) == rune"#")
+          ): 
+            inc l, 2
+            break
+          if (not wasAlpha) and (peek(l).isAlpha): wasAlpha = true
+          inc l
+      
+      else:  # single line comment
+        while true:
+          if not exist(l): break
+          checkTodo
+          let r = peek(l)
+          if r == "\n".rune: break
+          if (not wasAlpha) and (r.isAlpha): wasAlpha = true
+          inc l
+      
+      if isTodo: add sTodoComment, l
+      else:      add sComment, l
+    
     let r = peek()
-    if r.isAlpha: ident
-    else:         add sText
+    if r.isAlpha:      ident
+    elif r == rune"#": comment
+    else:              add sText
+    
+    # todo: operators
 
   
   for _ in 1..len:
@@ -144,35 +201,7 @@ proc parseNimCode*(s: seq[Rune], state: NimParseState, len = 100): tuple[segment
     s.parseNext(result.state, result.segments)
 
 
-# proc parseNimCode*(code: string): seq[seq[CodeSegment]] =
-#   var i = 0
-
-#   proc add(d: var seq[CodeSegment], k: CodeSegmentKind) =
-#     if d.len == 0 or d[^1].kind != k:
-#       system.add d, (k, i)
-
-#   template add(k: CodeSegmentKind) =
-#     d[^1].add k
-
-#   let parser = peg("segments", d: seq[seq[CodeSegment]]):
-#     ident <- utf8.alpha * *(utf8.alpha|Digit|'_')
-    
-#     operator       <- >+(Graph - (Alnum|'"'|'\''|'`')):
-#       add sOperator
-#       inc i, len $1
-    
-#     ttype          <- >(utf8.upper * *(utf8.alpha|Digit|'_')):
-#       add sType
-#       inc i, len $1
-    
-#     todoComment    <- >(+'#' * *Space * (i"todo" | i"to do") * &!(Alnum|'_') * *(1 - '\n')):
-#       add sTodoComment
-#       inc i, len $1
-
-#     comment        <- >('#' * *(1 - '\n')):
-#       add sComment
-#       inc i, len $1
-    
+#   let parser = peg("segments", d: seq[seq[CodeSegment]]):    
 #     bdigit        <- {'0'..'1'}
 #     odigit        <- {'0'..'7'}
 #     binNumber     <- bdigit * *(bdigit|'_') * ?('.' * bdigit * *(bdigit|'_')) * ?('\'' * ident)
@@ -212,25 +241,3 @@ proc parseNimCode*(s: seq[Rune], state: NimParseState, len = 100): tuple[segment
 #     charLit     <- charStart * *(charEscape|charChar) * '\'':
 #       add sCharLit
 #       inc i
-    
-#     functionCall <- >ident * &'(':
-#       add sFunction
-#       inc i, len $1
-    
-#     something <- string|charLit|number|todoComment|comment|ttype|functionCall|word|operator
-
-#     text <- 1:
-#       add sText
-#       inc i
-    
-#     newline <- ?'\r' * '\n':
-#       d.add @[]
-#       i = 0
-    
-#     init <- 0:
-#       d.add @[]
-
-#     segment  <- newline|something|text
-#     segments <- init * *segment
-    
-#   doassert parser.match(code, result).ok
