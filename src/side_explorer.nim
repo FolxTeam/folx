@@ -46,20 +46,16 @@ proc bySizeDownCmp*(x, y: File): int =
   else: -1
 
 
-proc digits(x: BiggestInt): int =
-  var x = x
-  if x == 0:
-    return 1
-
-  while x != 0:
-    inc result
-    x = x div 10
-
-
 let i_folder = readImage("resources/icons/folder.svg")
 let i_openfolder = readImage("resources/icons/openfolder.svg")
 let i_nim = readImage("resources/icons/nim.svg")
 let i_file = readImage("resources/icons/file.svg")
+
+proc getIcon(explorer: SideExplorer, file: File): Image =
+  if OpenDir(path: file.path / file.name) in explorer.open_dirs:
+    result = i_openfolder
+  else:
+    result = i_folder
 
 proc getIcon(ext: string): Image =
   case ext
@@ -134,6 +130,102 @@ proc side_explorer_onButtonDown*(
   else: discard
 
 
+proc updateExplorer(explorer: var SideExplorer, file: File) =
+  explorer.current_item = file.info.kind
+  explorer.current_item_path = file.path
+  explorer.current_item_name = file.name
+  explorer.current_item_ext = file.ext
+
+proc drawDir(
+  explorer: var SideExplorer,
+  image: Image,
+  file: File,
+  r: Context,
+  box: Rect,
+  nesting_indent: string,
+  text: string,
+  gt: var GlyphTable,
+  bg: ColorRgb,
+  y: var float32,
+  dy: float32,
+  icon_const: float32
+  ) =
+
+  image.draw(getIcon(explorer, file), translate(vec2(box.x + nesting_indent.toRunes.width(gt).float32, y)) * scale(vec2(icon_const * dy, icon_const * dy)))
+  r.image.draw text.toRunes, sStringLitEscape.color, vec2(box.x + 20, y), box, gt, bg
+  y += dy
+
+
+proc drawSelectedDir(
+  explorer: var SideExplorer,
+  image: Image,
+  file: File,
+  r: Context,
+  box: Rect,
+  nesting_indent: string,
+  text: string,
+  gt: var GlyphTable,
+  y: var float32,
+  dy: float32,
+  icon_const: float32
+  ) =
+
+  updateExplorer(explorer, file)
+
+  r.fillStyle = colorTheme.statusBarBg
+  r.fillRect rect(vec2(0,y), vec2(box.w, dy))
+  
+  image.draw(getIcon(explorer, file), translate(vec2(box.x + nesting_indent.toRunes.width(gt).float32, y)) * scale(vec2(icon_const * dy, icon_const * dy)))
+
+  r.image.draw text.toRunes, rgb(0, 0, 0), vec2(box.x + 20, y), box, gt, colorTheme.statusBarBg
+  y += dy
+
+
+proc drawFile(
+  image: Image,
+  file: File,
+  r: Context,
+  box: Rect,
+  nesting_indent: string,
+  text: string,
+  gt: var GlyphTable,
+  bg: ColorRgb,
+  y: var float32,
+  dy: float32,
+  icon_const: float32
+  ) =
+
+  image.draw(getIcon(file.ext), translate(vec2(box.x + nesting_indent.toRunes.width(gt).float32, y)) * scale(vec2(icon_const * dy, icon_const * dy)))
+
+  r.image.draw text.toRunes, sText.color, vec2(box.x + 20, y), box, gt, bg
+  y += dy
+    
+
+proc drawSelectedFile(
+  explorer: var SideExplorer,
+  image: Image,
+  file: File,
+  r: Context,
+  box: Rect,
+  nesting_indent: string,
+  text: string,
+  gt: var GlyphTable,
+  y: var float32,
+  dy: float32,
+  icon_const: float32
+  ) =
+
+  updateExplorer(explorer, file)
+
+  r.fillStyle = colorTheme.statusBarBg
+  r.fillRect rect(vec2(0,y), vec2(box.w, dy))
+
+  image.draw(getIcon(file.ext), translate(vec2(box.x + nesting_indent.toRunes.width(gt).float32, y)) * scale(vec2(icon_const * dy, icon_const * dy)))
+
+  r.image.draw text.toRunes, rgb(0, 0, 0), vec2(box.x + 20, y), box, gt, colorTheme.statusBarBg
+  y += dy
+
+
 proc side_explorer_area*(
   r: Context,
   image: Image,
@@ -167,83 +259,42 @@ proc side_explorer_area*(
     
     inc count_items
 
-    if file.info.kind == PathComponent.pcDir:
-
-      if count_items in pos.int..pos.ceil.int+size:
-
-        if count_items == int(explorer.item_index):
-
-          explorer.current_item = file.info.kind
-          explorer.current_item_path = file.path
-          explorer.current_item_name = file.name
-          explorer.current_item_ext = file.ext
-
-          r.fillStyle = colorTheme.statusBarBg
-          r.fillRect rect(vec2(0,y), vec2(box.w, dy))
-          
-          if OpenDir(path: file.path / file.name) in explorer.open_dirs:
-            image.draw(i_openfolder, translate(vec2(box.x + nesting_indent.toRunes.width(gt).float32, y)) * scale(vec2(icon_const * dy, icon_const * dy)))
-          else:
-            image.draw(i_folder, translate(vec2(box.x + nesting_indent.toRunes.width(gt).float32, y)) * scale(vec2(icon_const * dy, icon_const * dy)))
-
-          r.image.draw toRunes(text), rgb(0, 0, 0), vec2(box.x + 20, y), box, gt, colorTheme.statusBarBg
-          y += dy
-          
-        else:
-          if OpenDir(path: file.path / file.name) in explorer.open_dirs:
-            image.draw(i_openfolder, translate(vec2(box.x + nesting_indent.toRunes.width(gt).float32, y)) * scale(vec2(icon_const * dy, icon_const * dy)))
-          else:
-            image.draw(i_folder, translate(vec2(box.x + nesting_indent.toRunes.width(gt).float32, y)) * scale(vec2(icon_const * dy, icon_const * dy)))
-          r.image.draw text.toRunes, sStringLitEscape.color, vec2(box.x + 20, y), box, gt, bg
-          y += dy
-      
-
-      if OpenDir(path: file.path / file.name) in explorer.open_dirs:
-
-        dir.files[i].files = newFiles(file.path / file.name)
-
-        let (y2, count_items2) = r.side_explorer_area(
-          image = image,
-          box = box,
-          pos = pos,
-          gt = gt,
-          bg = configuration.colorTheme.textarea,
-          dir = dir.files[i],
-          explorer = explorer,
-          count_items = count_items,
-          y = y,
-          nesting = nesting + 1
-        )
-
-        y = y2
-        count_items = count_items2
-
-    else:
-      if count_items in pos.int..pos.ceil.int+size:
+    if count_items in pos.int..pos.ceil.int+size:
+      case file.info.kind
+      of PathComponent.pcFile:
 
         if count_items == int(explorer.item_index):
-
-          explorer.current_item = file.info.kind
-          explorer.current_item_path = file.path
-          explorer.current_item_name = file.name
-          explorer.current_item_ext = file.ext
-
-          r.fillStyle = colorTheme.statusBarBg
-          r.fillRect rect(vec2(0,y), vec2(box.w, dy))
-
-          image.draw(getIcon(file.ext), translate(vec2(box.x + nesting_indent.toRunes.width(gt).float32, y)) * scale(vec2(icon_const * dy, icon_const * dy)))
-
-          r.image.draw toRunes(text), rgb(0, 0, 0), vec2(box.x + 20, y), box, gt, colorTheme.statusBarBg
-          y += dy
-
-          explorer.current_item = file.info.kind
+          drawSelectedFile(explorer, image, file, r, box, nesting_indent, text, gt, y, dy, icon_const)
         else:
+          drawFile(image, file, r, box, nesting_indent, text, gt, bg, y, dy, icon_const)
 
-          image.draw(getIcon(file.ext), translate(vec2(box.x + nesting_indent.toRunes.width(gt).float32, y)) * scale(vec2(icon_const * dy, icon_const * dy)))
+      of PathComponent.pcDir:
 
-          r.image.draw text.toRunes, sText.color, vec2(box.x + 20, y), box, gt, bg
-          y += dy
-    
+        if count_items == int(explorer.item_index):
+          drawSelectedDir(explorer, image, file, r, box, nesting_indent, text, gt, y, dy, icon_const)
+        else:
+          drawDir(explorer, image, file, r, box, nesting_indent, text, gt, bg, y, dy, icon_const)
+        
+
+        if OpenDir(path: file.path / file.name) in explorer.open_dirs:
+
+          dir.files[i].files = newFiles(file.path / file.name)
+
+          (y, count_items) = r.side_explorer_area(
+            image = image,
+            box = box,
+            pos = pos,
+            gt = gt,
+            bg = configuration.colorTheme.textarea,
+            dir = dir.files[i],
+            explorer = explorer,
+            count_items = count_items,
+            y = y,
+            nesting = nesting + 1
+          )
+
+      else:
+        discard
     
   explorer.count_items = count_items
   return (y, count_items)
