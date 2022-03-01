@@ -21,7 +21,7 @@ type
 
   ColorTheme* = object
     scrollbar*: ColorRGB
-    verticalline*: ColorRGB
+    verticalLine*: ColorRGB
     lineNumbers*: ColorRGB
     lineNumbersSelect*: ColorRGB
     textarea*: ColorRGB
@@ -89,7 +89,7 @@ static: writeFile "config.default.json", defaultConfig.toJson.parseJson.pretty
 
 const defaultColorTheme = ColorTheme(
   scrollbar: rgb(48, 48, 48),
-  verticalline: rgb(64, 64, 64),
+  verticalLine: rgb(64, 64, 64),
   linenumbers: rgb(32, 32, 32),
   linenumbersselect: rgb(15, 15, 15),
   textarea: rgb(32, 32, 32),

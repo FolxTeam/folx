@@ -1,8 +1,8 @@
 {
     "scrollbar": "303030",
-    "verticalline": "404040",
-    "linenumbers": "202020",
-    "linenumbersselect": "0f0f0f",
+    "verticalLine": "404040",
+    "lineNumbers": "202020",
+    "lineNumbersSelect": "0f0f0f",
     "textarea": "202020",
 
     "sKeyword": "569cd6",
