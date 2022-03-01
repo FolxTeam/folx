@@ -14,5 +14,6 @@ nimcache
 *.dll
 __pycache__
 bindings/generated
-config.json
-config.default.json
+/config.json
+/config.default.json
+/resources/themes/default.json
