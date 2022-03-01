@@ -231,6 +231,8 @@ window.onButtonPress = proc(button: Button) =
     text_editor_onButtonDown(
       button = button,
       cursor = cursor,
+      window = window,
+      pos = pos,
       text = opened_file,
     )
   

@@ -246,6 +246,8 @@ proc text_editor*(
 proc text_editor_onButtonDown*(
   button: Button,
   cursor: var IVec2,
+  window: Window,
+  pos: var float32,
   text: Text,
   ) =
   if text.len < 0: return
@@ -278,5 +280,29 @@ proc text_editor_onButtonDown*(
   of KeyUp:
     cursor.y -= 1
     cursor.y = cursor.y.bound(0'i32..text.lines.high.int32)
+  
+  of KeyHome:
+    if window.buttonDown[KeyLeftControl]:
+      cursor.y = 0
+      cursor.y = cursor.y.bound(0'i32..text.lines.high.int32)
+
+      cursor.x = 0
+      cursor.x = cursor.x.bound(0'i32..text{cursor.y}.len.int32)
+      pos = 0'f32
+    else:
+      cursor.x = 0
+      cursor.x = cursor.x.bound(0'i32..text{cursor.y}.len.int32)
+
+  of KeyEnd:
+    if window.buttonDown[KeyLeftControl]:
+      cursor.y = text.lines.high.int32
+      cursor.y = cursor.y.bound(0'i32..text.lines.high.int32)
+
+      cursor.x = text{cursor.y}.len.int32
+      cursor.x = cursor.x.bound(0'i32..text{cursor.y}.len.int32)
+      pos = text.lines.high.float32
+    else:
+      cursor.x = text{cursor.y}.len.int32
+      cursor.x = cursor.x.bound(0'i32..text{cursor.y}.len.int32)
   
   else: discard
