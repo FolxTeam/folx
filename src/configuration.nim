@@ -22,8 +22,8 @@ type
   ColorTheme* = object
     scrollbar*: ColorRGB
     verticalline*: ColorRGB
-    linenumbers*: ColorRGB
-    linenumbersselect*: ColorRGB
+    lineNumbers*: ColorRGB
+    lineNumbersSelect*: ColorRGB
     textarea*: ColorRGB
     statusBarBg*: ColorRGB
 

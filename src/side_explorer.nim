@@ -1,6 +1,7 @@
 import std/sequtils, os, std/unicode, math, strutils, std/algorithm
 import pixwindy, pixie
 import render, syntax_highlighting, configuration
+from text_editor import color
 
 type 
   File* = object

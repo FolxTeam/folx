@@ -1,19 +1,7 @@
-import os, times, math, sequtils, unicode, strutils, std/monotimes
+import sequtils, os, times, math, unicode, std/monotimes
 import pixwindy, pixie
-import render, syntax_highlighting, configuration, text_editor, side_explorer, git
+import render, syntax_highlighting, configuration, text_editor, side_explorer, git, text
 
-
-proc lineStarts(s: seq[Rune]): seq[int] =
-  template rune(x): Rune = static(x.runeAt(0))
-  result = @[0]
-  var p = 0
-  while p < s.high:
-    if s[p] == "\n".rune:
-      result.add p + 1
-    elif s[p] == "\r".rune and p + 1 < s.high and s[p + 1] == "\n".rune:
-      result.add p + 1
-      inc p
-    inc p
 
 proc status_bar(
   r: Context,
@@ -41,13 +29,10 @@ var
   editor_gt    = readFont(config.font).newGlyphTable(config.fontSize)
   interface_gt = readFont(config.interfaceFont).newGlyphTable(config.interfaceFontSize)
 
-  text: string
-  runes: seq[Rune]
-  runesLineStarts: seq[int]
+  opened_file: Text
   
-  lines: seq[seq[Rune]]
   text_indentation: Indentation
-  colors: seq[ColorRgb]
+  text_colors: seq[ColorRgb]
 
   displayRequest = false
   image = newImage(1280, 720)
@@ -61,13 +46,10 @@ var main_explorer = SideExplorer(current_dir: config.workspace, item_index: 1, d
 
 proc open_file*(file: string) =
   window.title = file & " - folx"
-  text = file.readFile.replace("\r\n", "\n")
-  runes = text.toRunes
-  runesLineStarts = runes.lineStarts
-  colors = runes.parseNimCode(NimParseState(), runes.len).segments.colors
-  assert colors.len == runes.len
-  lines = text.splitLines.map(toRunes)
-  text_indentation = lines.indentation
+  opened_file = newText(file.readFile)
+  text_colors = opened_file.parseNimCode(NimParseState(), opened_file.len).segments.colors
+  assert text_colors.len == opened_file.len
+  text_indentation = toSeq(0..opened_file.lines.high).mapit(opened_file{it}.toOpenArray.toSeq).indentation
 
 open_file config.file
 
@@ -143,9 +125,8 @@ proc display =
       gt = editor_gt,
       pos = visual_pos,
       bg = colorTheme.textarea,
-      text = runes,
-      colors = colors,
-      lineStarts = runesLineStarts,
+      text = opened_file,
+      colors = text_colors,
       indentation = text_indentation,
       cursor = cursor,
     )
@@ -167,9 +148,8 @@ proc display =
       gt = editor_gt,
       pos = visual_pos,
       bg = colorTheme.textarea,
-      text = runes,
-      colors = colors,
-      lineStarts = runesLineStarts,
+      text = opened_file,
+      colors = text_colors,
       indentation = text_indentation,
       cursor = cursor,
     )
@@ -208,7 +188,7 @@ window.onScroll = proc =
     clear editor_gt
     displayRequest = true
   else:
-    let lines_count = if main_explorer.display: main_explorer.count_items.float32 else: lines.high.float32
+    let lines_count = if main_explorer.display: main_explorer.count_items.float32 else: opened_file.lines.high.float32
     pos = (pos - window.scrollDelta.y * 3).max(0).min(lines_count)
 
 
@@ -240,7 +220,7 @@ window.onButtonPress = proc(button: Button) =
     text_editor_onButtonDown(
       button = button,
       cursor = cursor,
-      text = lines,
+      text = opened_file,
     )
   
   display()

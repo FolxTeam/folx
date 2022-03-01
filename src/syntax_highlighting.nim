@@ -1,6 +1,6 @@
 import sequtils, unicode, streams
 import pixie
-import configuration
+import text
 
 type
   CodeKind* = enum
@@ -34,54 +34,12 @@ type
     inMultiline: bool
 
 
-proc color*(sk: CodeKind): ColorRGB =
-  ## todo: move from syntax_highlighting
-  case sk
-  of sKeyword, sOperatorWord, sBuiltinType:
-    colorTheme.sKeyword
 
-  of sControlFlow:
-    colorTheme.sControlFlow
-  
-  of sType:
-    colorTheme.sType
-  
-  of sStringLit, sCharLit:
-    colorTheme.sStringLit
-  
-  of sStringLitEscape, sCharLitEscape:
-    colorTheme.sStringLitEscape
-  
-  of sNumberLit:
-    colorTheme.sNumberLit
-  
-  of sFunction:
-    colorTheme.sFunction
-  
-  of sComment:
-    colorTheme.sComment
-  
-  of sTodoComment:
-    colorTheme.sTodoComment
-  
-  of sLineNumber:
-    colorTheme.sLineNumber
-  
-  of sError:
-    colorTheme.sError
-  
-  else: colorTheme.sText
-
-proc colors*(scs: openarray[CodeKind]): seq[ColorRgb] =
-  scs.map(color)
-
-
-
-proc parseNimCode*(s: openarray[Rune], state: NimParseState, len = 100): tuple[segments: seq[CodeKind], state: NimParseState] =
+proc parseNimCode*(s: Text, state: NimParseState, len = 100): tuple[segments: seq[CodeKind], state: NimParseState] =
   result.state = state
   result.segments = newSeq[CodeKind](len)
 
-  proc parseNext(s: openarray[Rune], state: var NimParseState, res: var seq[CodeKind]) =
+  proc parseNext(s: Text, state: var NimParseState, res: var seq[CodeKind]) =
     template rune(s: string): Rune = static(s.runeAt(0))
     template runes(s: string): seq[Rune] = static(s.toRunes)
     
@@ -120,11 +78,11 @@ proc parseNimCode*(s: openarray[Rune], state: NimParseState, len = 100): tuple[s
           sType
 
         else:
-          case $s[state.pos ..< state.pos + l]
+          case $s[state.pos ..< state.pos + l].toOpenArray.toSeq
           of "func", "proc", "template", "iterator", "converter", "macro", "method", 
             "addr", "asm", "bind", "concept", "const", "discard", "distinct", "enum", "export", "from", 
             "import", "include", "interface", "let", "mixin", "nil", "object", "of", "out", "ptr", 
-            "ref", "static", "tuple", "type", "using", "var", "true", "false", "off", "on", "low", "high", "lent":
+            "ref", "static", "tuple", "type", "using", "var", "true", "false", "off", "on", "low", "high", "lent", "sink":
             sKeyword
 
           of "block", "break", "case", "continue", "defer", "do", "elif", "else", "end", "except", 
@@ -135,7 +93,7 @@ proc parseNimCode*(s: openarray[Rune], state: NimParseState, len = 100): tuple[s
             sOperatorWord
           
           of "int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "uint64", "float32", "float64", 
-            "int", "float", "string", "bool", "byte", "uint", "seq", "set", "char", "void", "auto", "any":
+            "int", "float", "string", "bool", "byte", "uint", "seq", "set", "char", "void", "auto", "any", "pointer":
             sBuiltinType
         
           elif exist(l) and (peek(l) == "(".rune or peek(l) == "\"".rune):
