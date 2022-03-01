@@ -179,7 +179,7 @@ proc side_explorer_area*(
           explorer.current_item_ext = file.ext
 
           r.fillStyle = colorTheme.statusBarBg
-          r.fillRect rect(vec2(0,y), vec2(text.toRunes.width(gt).float32, dy))
+          r.fillRect rect(vec2(0,y), vec2(box.w, dy))
           
           if OpenDir(path: file.path / file.name) in explorer.open_dirs:
             image.draw(i_openfolder, translate(vec2(box.x + nesting_indent.toRunes.width(gt).float32, y)) * scale(vec2(icon_const * dy, icon_const * dy)))
@@ -229,7 +229,7 @@ proc side_explorer_area*(
           explorer.current_item_ext = file.ext
 
           r.fillStyle = colorTheme.statusBarBg
-          r.fillRect rect(vec2(0,y), vec2(text.toRunes.width(gt).float32, dy))
+          r.fillRect rect(vec2(0,y), vec2(box.w, dy))
 
           image.draw(getIcon(file.ext), translate(vec2(box.x + nesting_indent.toRunes.width(gt).float32, y)) * scale(vec2(icon_const * dy, icon_const * dy)))
 
