@@ -95,10 +95,10 @@ proc line_numbers(
     let w = float32 s.width(gt)
     if i == cursor.y:
       r.fillStyle = colorTheme.linenumbersselect.color
-      r.fillRect rect(vec2(0,y), vec2(box.w, dy))
-      r.image.draw s, sLineNumber.color, vec2((box.x + box.w + toRunes($total).width(gt).float32  ) / 2 - w, y), box, gt, colorTheme.linenumbersselect
+      r.fillRect rect(vec2(box.x,y), vec2(box.w, dy))
+      r.image.draw s, sLineNumber.color, vec2(box.x + (box.w + toRunes($total).width(gt).float32  ) / 2 - w, y), box, gt, colorTheme.linenumbersselect
     else:
-      r.image.draw s, sLineNumber.color, vec2((box.x + box.w + toRunes($total).width(gt).float32  ) / 2 - w, y), box, gt, bg
+      r.image.draw s, sLineNumber.color, vec2(box.x + (box.w + toRunes($total).width(gt).float32  ) / 2 - w, y), box, gt, bg
     y += round(gt.font.size * 1.27)
 
 

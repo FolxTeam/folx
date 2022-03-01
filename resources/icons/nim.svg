@@ -1,0 +1,14 @@
+<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 viewBox="0 0 16 16" style="enable-background:new 0 0 16 16;" xml:space="preserve">
+<rect id="frame" y="0" fill="none" width="16" height="16"/>
+<g>
+	<path fill-rule="evenodd" clip-rule="evenodd" fill="#F4AF3D" fill-opacity="0.7" d="M1,16h15V9H1V16z"/>
+	<path fill-rule="evenodd" clip-rule="evenodd" fill="#9AA7B0" fill-opacity="0.8" d="M7,1L3,5h4V1z"/>
+	<path fill-rule="evenodd" clip-rule="evenodd" fill="#9AA7B0" fill-opacity="0.8" d="M8,1v5H3v2h10V1H8z"/>
+	<g enable-background="new">
+		<path fill="#5D4C39" class="st4" d="M5.4,15L3,11.9V15H2v-4.9h1l2.3,3v-3h1.1V15H5.4z"/>
+		<path fill="#5D4C39" d="M7.6,15v-4.9h1.1V15H7.6z"/>
+		<path fill="#5D4C39" d="M13.7,15v-3.2l-1.4,2.1h0l-1.4-2.1V15H9.9v-4.9H11l1.3,2.1l1.3-2.1h1.2V15H13.7z"/>
+	</g>
+</g>
+</svg>

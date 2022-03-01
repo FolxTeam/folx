@@ -1,6 +1,6 @@
 import os, times, math, sequtils, unicode, strutils, std/monotimes
 import pixwindy, pixie
-import render, syntax_highlighting, configuration, text_editor, side_explorer
+import render, syntax_highlighting, configuration, text_editor, side_explorer, git
 
 
 proc lineStarts(s: seq[Rune]): seq[int] =
@@ -15,20 +15,24 @@ proc lineStarts(s: seq[Rune]): seq[int] =
       inc p
     inc p
 
-
 proc status_bar(
   r: Context,
   box: Rect,
   gt: var GlyphTable,
   bg: ColorRgb,
-  text: seq[Rune],
+  fields: seq[tuple[field: string, value: string]],
   ) =
-  const margin = vec2(8, 2)
 
+  const margin = vec2(8, 2)
+  var s = ""
+
+  for i in fields:
+    s.add(i.field & ": " & i.value & " ")
+  
   r.fillStyle = bg
   r.fillRect box
 
-  r.image.draw text, sText.color, box.xy + margin, rect(box.xy, box.wh - margin), gt, bg
+  r.image.draw toRunes(s), sText.color, box.xy + margin, rect(box.xy, box.wh - margin), gt, bg
 
 
 let window = newWindow("folx", config.window.size, visible=false)
@@ -53,11 +57,11 @@ var
   visual_pos = pos
   cursor = ivec2(0, 0)
 
-var main_explorer = SideExplorer(current_dir: config.workspace, item_index: 1, display: false)
+var main_explorer = SideExplorer(current_dir: config.workspace, item_index: 1, display: false, pos: 0)
 
 proc open_file*(file: string) =
   window.title = file & " - folx"
-  text = file.readFile
+  text = file.readFile.replace("\r\n", "\n")
   runes = text.toRunes
   runesLineStarts = runes.lineStarts
   colors = runes.parseNimCode(NimParseState(), runes.len).segments.colors
@@ -68,24 +72,45 @@ proc open_file*(file: string) =
 open_file config.file
 
 proc animate(dt: float32): bool =
-  if pos != visual_pos:
-    let
-      fontSize = editor_gt.font.size
-      pvp = (visual_pos * fontSize).round.int32  # visual position in pixels
+  # todo: refactor repeat code
+  if main_explorer.display:
+    if pos != main_explorer.pos:
+      let
+        fontSize = editor_gt.font.size
+        pvp = (main_explorer.pos * fontSize).round.int32  # visual position in pixels
+        
+        # position delta
+        d = (abs(pos - main_explorer.pos) * pow(1 / 2, (1 / dt) / 50)).max(0.1).min(abs(pos - main_explorer.pos))
+
+      # move position by delta
+      if pos > main_explorer.pos: main_explorer.pos += d
+      else:                main_explorer.pos -= d
+
+      # if position close to integer number, round it
+      if abs(main_explorer.pos - pos) < 1 / fontSize / 2.1:
+        main_explorer.pos = pos
       
-      # position delta
-      d = (abs(pos - visual_pos) * pow(1 / 2, (1 / dt) / 50)).max(0.1).min(abs(pos - visual_pos))
+      # if position changed, signal to display by setting result to true
+      if pvp != (main_explorer.pos * fontSize).round.int32: result = true
+  else:
+    if pos != visual_pos:
+      let
+        fontSize = editor_gt.font.size
+        pvp = (visual_pos * fontSize).round.int32  # visual position in pixels
+        
+        # position delta
+        d = (abs(pos - visual_pos) * pow(1 / 2, (1 / dt) / 50)).max(0.1).min(abs(pos - visual_pos))
 
-    # move position by delta
-    if pos > visual_pos: visual_pos += d
-    else:                visual_pos -= d
+      # move position by delta
+      if pos > visual_pos: visual_pos += d
+      else:                visual_pos -= d
 
-    # if position close to integer number, round it
-    if abs(visual_pos - pos) < 1 / fontSize / 2.1:
-      visual_pos = pos
-    
-    # if position changed, signal to display by setting result to true
-    if pvp != (visual_pos * fontSize).round.int32: result = true
+      # if position close to integer number, round it
+      if abs(visual_pos - pos) < 1 / fontSize / 2.1:
+        visual_pos = pos
+      
+      # if position changed, signal to display by setting result to true
+      if pvp != (visual_pos * fontSize).round.int32: result = true
 
 
 proc display =
@@ -93,7 +118,7 @@ proc display =
 
   if main_explorer.display:
 
-    var box = rect(vec2(0, 0), window.size.vec2 - vec2(10, 20))
+    var box = rect(vec2(0, 0), vec2(200, window.size.vec2.y))
     var dy = round(editor_gt.font.size * 1.27)
     var y = box.y - dy * (pos mod 1)
 
@@ -103,7 +128,7 @@ proc display =
     r.side_explorer_area(
       image = image,
       box = box,
-      pos = visual_pos,
+      pos = main_explorer.pos,
       gt = editor_gt,
       bg = configuration.colorTheme.textarea,
       dir = main_explorer.dir,
@@ -112,9 +137,9 @@ proc display =
       y = y,
       nesting = 0,
     )
-  else:  
+
     r.text_editor(
-      box = rect(vec2(), window.size.vec2 - vec2(0, 20)),
+      box = rect(vec2(box.w, 0), window.size.vec2 - vec2(box.w, 20)),
       gt = editor_gt,
       pos = visual_pos,
       bg = colorTheme.textarea,
@@ -129,7 +154,36 @@ proc display =
       box = rect(vec2(0, window.size.vec2.y - 20), vec2(window.size.vec2.x, 20)),
       gt = interface_gt,
       bg = colorTheme.statusBarBg,
-      text = toRunes "visual_pos: " & $visual_pos,
+      fields = @[
+        ("count_items", $main_explorer.count_items),
+        ("item", $main_explorer.item_index),
+        ("git", getCurrentBranch(main_explorer.current_dir)),
+        ("visual_pos", $main_explorer.pos),  
+      ]
+    )
+  else:  
+    r.text_editor(
+      box = rect(vec2(0, 0), window.size.vec2 - vec2(0, 20)),
+      gt = editor_gt,
+      pos = visual_pos,
+      bg = colorTheme.textarea,
+      text = runes,
+      colors = colors,
+      lineStarts = runesLineStarts,
+      indentation = text_indentation,
+      cursor = cursor,
+    )
+
+    r.status_bar(
+      box = rect(vec2(0, window.size.vec2.y - 20), vec2(window.size.vec2.x, 20)),
+      gt = interface_gt,
+      bg = colorTheme.statusBarBg,
+      fields = @[
+        ("line", $cursor[1]),
+        ("col", $cursor[0]),
+        ("git", getCurrentBranch(main_explorer.current_dir)),
+        ("visual_pos", $visual_pos),  
+      ]
     )
 
   window.draw image
@@ -166,7 +220,7 @@ window.onResize = proc =
   display()
 
 window.onButtonPress = proc(button: Button) =
-  if window.buttonDown[KeyLeftControl] and button == KeyO:
+  if window.buttonDown[KeyLeftControl] and button == KeyE:
     main_explorer.display = not main_explorer.display
     
     if main_explorer.display:
@@ -179,7 +233,6 @@ window.onButtonPress = proc(button: Button) =
       path = config.file,
       onFileOpen = (proc(file: string) =
         open_file file
-        main_explorer.display = false
       ),
     )
 

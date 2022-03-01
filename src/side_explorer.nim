@@ -22,6 +22,7 @@ type
     current_item_path*: string
     current_item_ext*: string
     count_items*: int
+    pos*: float32
     item_index*: int
     dir*: File
     display*: bool
@@ -53,6 +54,18 @@ proc digits(x: BiggestInt): int =
   while x != 0:
     inc result
     x = x div 10
+
+
+let i_folder = readImage("resources/icons/folder.svg")
+let i_openfolder = readImage("resources/icons/openfolder.svg")
+let i_nim = readImage("resources/icons/nim.svg")
+let i_file = readImage("resources/icons/file.svg")
+
+proc getIcon(ext: string): Image =
+  case ext
+  of ".nim": result = i_nim
+  else: result = i_file
+
 
 proc newFiles(file_path: string): seq[File] =
   var info: FileInfo
@@ -120,6 +133,7 @@ proc side_explorer_onButtonDown*(
 
   else: discard
 
+
 proc side_explorer_area*(
   r: Context,
   image: Image,
@@ -134,26 +148,22 @@ proc side_explorer_area*(
   nesting: int32,
   ) : (float32, int32) {.discardable.} =
 
-  let dy = round(gt.font.size * 1.27)
-  var y = y
-  var dir = dir
-  var count_items = count_items
+  let 
+    dy = round(gt.font.size * 1.40)
+    icon_const = 0.06
+  var 
+    y = y
+    dir = dir
+    count_items = count_items
+    size = (box.h / gt.font.size).ceil.int
   
-  var max_file_length = 0
-  var max_file_size: BiggestInt = 0
-  var size = (box.h / gt.font.size).ceil.int
-  
-  # todo: refactor long expressions
-  for file in dir.files:
-    max_file_length = if (file.name & file.ext).len() > max_file_length: (file.name & file.ext).len() else: max_file_length
-    max_file_size = if file.info.size > max_file_size: file.info.size else: max_file_size
-
   # ! sorted on each component rerender | check if seq already sorted or take the sort to updateDir
   sort(dir.files, folderUpCmp)
   
   for i, file in dir.files.pairs:
 
-    let text = " ".repeat(nesting * 2) & file.name & file.ext
+    let nesting_indent = " ".repeat(nesting * 2)
+    let text = nesting_indent & file.name & file.ext
     
     inc count_items
 
@@ -170,11 +180,21 @@ proc side_explorer_area*(
 
           r.fillStyle = colorTheme.statusBarBg
           r.fillRect rect(vec2(0,y), vec2(text.toRunes.width(gt).float32, dy))
-          r.image.draw toRunes(text), rgb(0, 0, 0), vec2(box.x, y), box, gt, colorTheme.statusBarBg
+          
+          if OpenDir(path: file.path / file.name) in explorer.open_dirs:
+            image.draw(i_openfolder, translate(vec2(box.x + nesting_indent.toRunes.width(gt).float32, y)) * scale(vec2(icon_const * dy, icon_const * dy)))
+          else:
+            image.draw(i_folder, translate(vec2(box.x + nesting_indent.toRunes.width(gt).float32, y)) * scale(vec2(icon_const * dy, icon_const * dy)))
+
+          r.image.draw toRunes(text), rgb(0, 0, 0), vec2(box.x + 20, y), box, gt, colorTheme.statusBarBg
           y += dy
           
         else:
-          r.image.draw text.toRunes, sStringLitEscape.color, vec2(box.x, y), box, gt, bg
+          if OpenDir(path: file.path / file.name) in explorer.open_dirs:
+            image.draw(i_openfolder, translate(vec2(box.x + nesting_indent.toRunes.width(gt).float32, y)) * scale(vec2(icon_const * dy, icon_const * dy)))
+          else:
+            image.draw(i_folder, translate(vec2(box.x + nesting_indent.toRunes.width(gt).float32, y)) * scale(vec2(icon_const * dy, icon_const * dy)))
+          r.image.draw text.toRunes, sStringLitEscape.color, vec2(box.x + 20, y), box, gt, bg
           y += dy
       
 
@@ -200,6 +220,7 @@ proc side_explorer_area*(
 
     else:
       if count_items in pos.int..pos.ceil.int+size:
+
         if count_items == int(explorer.item_index):
 
           explorer.current_item = file.info.kind
@@ -209,12 +230,18 @@ proc side_explorer_area*(
 
           r.fillStyle = colorTheme.statusBarBg
           r.fillRect rect(vec2(0,y), vec2(text.toRunes.width(gt).float32, dy))
-          r.image.draw toRunes(text), rgb(0, 0, 0), vec2(box.x, y), box, gt, colorTheme.statusBarBg
+
+          image.draw(getIcon(file.ext), translate(vec2(box.x + nesting_indent.toRunes.width(gt).float32, y)) * scale(vec2(icon_const * dy, icon_const * dy)))
+
+          r.image.draw toRunes(text), rgb(0, 0, 0), vec2(box.x + 20, y), box, gt, colorTheme.statusBarBg
           y += dy
 
           explorer.current_item = file.info.kind
         else:
-          r.image.draw text.toRunes, sText.color, vec2(box.x, y), box, gt, bg
+
+          image.draw(getIcon(file.ext), translate(vec2(box.x + nesting_indent.toRunes.width(gt).float32, y)) * scale(vec2(icon_const * dy, icon_const * dy)))
+
+          r.image.draw text.toRunes, sText.color, vec2(box.x + 20, y), box, gt, bg
           y += dy
     
     
