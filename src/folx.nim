@@ -1,4 +1,4 @@
-import sequtils, os, times, math, unicode, std/monotimes
+import sequtils, os, times, math, unicode, std/monotimes, options
 import pixwindy, pixie
 import render, syntax_highlighting, configuration, text_editor, side_explorer, git, text
 
@@ -15,7 +15,7 @@ proc status_bar(
   var s = ""
 
   for i in fields:
-    s.add(i.field & ": " & i.value & " ")
+    s.add(i.field & ": " & i.value & "   ")
   
   r.fillStyle = bg
   r.fillRect box
@@ -138,7 +138,11 @@ proc display =
       fields = @[
         ("count_items", $main_explorer.count_items),
         ("item", $main_explorer.item_index),
-        ("git", getCurrentBranch(main_explorer.current_dir)),
+      ] & (
+        if main_explorer.current_dir.gitBranch.isSome: @[
+          ("git", main_explorer.current_dir.gitBranch.get),
+        ] else: @[]
+      ) & @[
         ("visual_pos", $main_explorer.pos),  
       ]
     )
@@ -161,8 +165,12 @@ proc display =
       fields = @[
         ("line", $cursor[1]),
         ("col", $cursor[0]),
-        ("git", getCurrentBranch(main_explorer.current_dir)),
-        ("visual_pos", $visual_pos),  
+      ] & (
+        if main_explorer.current_dir.gitBranch.isSome: @[
+          ("git", main_explorer.current_dir.gitBranch.get),
+        ] else: @[]
+      ) & @[
+        ("visual_pos", $main_explorer.pos),  
       ]
     )
 

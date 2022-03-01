@@ -176,7 +176,7 @@ proc cursor(
     y = cpos.y.int.bound(0..text.lines.high)
     lineStart = text.lines[y].first
     lineEnd = text.lines[y].last
-    x = cpos.x.int.bound(0 .. lineEnd-lineStart)
+    x = cpos.x.int.bound(0 .. lineEnd-lineStart + 1)
   
   r.fillStyle = colorTheme.sText
   r.fillRect rect(

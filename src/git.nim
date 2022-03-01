@@ -1,11 +1,7 @@
-import os, strutils
+import os, options
 
-proc getBranchFromString(str: string): string =
-  return str.split("/")[^1]
-
-proc getCurrentBranch*(current_dir: string): string =
+proc gitBranch*(current_dir: string): Option[string] =
   if (current_dir / ".git/HEAD").fileExists():
-    let file = readFile(current_dir / ".git/HEAD")
-    return getBranchFromString(file)
+    some readFile(current_dir / ".git/HEAD").splitPath.tail
   else:
-    return "NONE"
+    none string
