@@ -170,7 +170,7 @@ proc display =
           ("git", main_explorer.current_dir.gitBranch.get),
         ] else: @[]
       ) & @[
-        ("visual_pos", $main_explorer.pos),  
+        ("visual_pos", $visual_pos),  
       ]
     )
 
@@ -212,7 +212,10 @@ window.onButtonPress = proc(button: Button) =
     main_explorer.display = not main_explorer.display
     
     if main_explorer.display:
+      pos = main_explorer.pos
       main_explorer.updateDir config.file
+    else:
+      pos = visual_pos
 
   elif main_explorer.display:
     side_explorer_onButtonDown(

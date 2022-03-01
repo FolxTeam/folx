@@ -260,43 +260,40 @@ proc side_explorer_area*(
     
     inc count_items
 
-    if count_items in pos.int..pos.ceil.int+size:
-      case file.info.kind
-      of PathComponent.pcFile:
-
+    case file.info.kind
+    of PathComponent.pcFile:
+      if count_items in pos.int..pos.ceil.int+size:
         if count_items == int(explorer.item_index):
           drawSelectedFile(explorer, image, file, r, box, nesting_indent, text, gt, y, dy, icon_const)
         else:
           drawFile(image, file, r, box, nesting_indent, text, gt, bg, y, dy, icon_const)
 
-      of PathComponent.pcDir:
-
+    of PathComponent.pcDir:
+      if count_items in pos.int..pos.ceil.int+size:
         if count_items == int(explorer.item_index):
           drawSelectedDir(explorer, image, file, r, box, nesting_indent, text, gt, y, dy, icon_const)
         else:
           drawDir(explorer, image, file, r, box, nesting_indent, text, gt, bg, y, dy, icon_const)
+      
+      if OpenDir(path: file.path / file.name) in explorer.open_dirs:
+
+        dir.files[i].files = newFiles(file.path / file.name)
+
+        (y, count_items) = r.side_explorer_area(
+          image = image,
+          box = box,
+          pos = pos,
+          gt = gt,
+          bg = configuration.colorTheme.textarea,
+          dir = dir.files[i],
+          explorer = explorer,
+          count_items = count_items,
+          y = y,
+          nesting = nesting + 1
+        )
+
+    else:
+      discard
         
-
-        if OpenDir(path: file.path / file.name) in explorer.open_dirs:
-
-          dir.files[i].files = newFiles(file.path / file.name)
-
-          (y, count_items) = r.side_explorer_area(
-            image = image,
-            box = box,
-            pos = pos,
-            gt = gt,
-            bg = configuration.colorTheme.textarea,
-            dir = dir.files[i],
-            explorer = explorer,
-            count_items = count_items,
-            y = y,
-            nesting = nesting + 1
-          )
-
-      else:
-        discard
-    
   explorer.count_items = count_items
   return (y, count_items)
-    
