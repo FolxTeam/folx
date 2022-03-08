@@ -47,9 +47,6 @@ proc colors*(scs: openarray[CodeKind]): seq[ColorRgb] =
   scs.map(color)
 
 
-proc bound[T](x: T, s: HSlice[T, T]): T = x.max(s.a).min(s.b)
-proc bound[T](x, s: HSlice[T, T]): HSlice[T, T] = HSlice[T, T](a: x.a.bound(s), b: x.b.bound(s))
-
 proc indentation*(text: seq[seq[Rune]]): Indentation =
   ## todo: use Text
   proc indentation(line: seq[Rune], prev: seq[int]): tuple[len: seq[int], has_graph: bool] =
@@ -242,6 +239,33 @@ proc text_editor*(
   )
 
 
+proc bound(cursor: var IVec2, text: Text) =
+  if text.len < 0: return
+
+  cursor.y = cursor.y.bound(0'i32..text.lines.high.int32)
+  cursor.x = cursor.x.bound(0'i32..text{cursor.y}.len.int32)
+
+
+proc moveRight(cursor: var IVec2, text: Text) =
+  bound cursor, text
+  
+  cursor.x += 1
+  if cursor.x > text{cursor.y}.len and cursor.y < text.lines.high:
+    cursor.y += 1
+    cursor.x = 0
+  cursor.x = cursor.x.bound(0'i32..text{cursor.y}.len.int32)
+
+
+proc moveLeft(cursor: var IVec2, text: Text) =
+  bound cursor, text
+  
+  cursor.x -= 1
+  if cursor.x < 0 and cursor.y > 0:
+    cursor.y -= 1
+    cursor.x = text{cursor.y}.len.int32
+  cursor.x = cursor.x.bound(0'i32..text{cursor.y}.len.int32)
+
+
 
 proc text_editor_onButtonDown*(
   button: Button,
@@ -254,24 +278,10 @@ proc text_editor_onButtonDown*(
 
   case button
   of KeyRight:
-    cursor.y = cursor.y.bound(0'i32..text.lines.high.int32)
-    cursor.x = cursor.x.bound(0'i32..text{cursor.y}.len.int32)
-    
-    cursor.x += 1
-    if cursor.x > text{cursor.y}.len and cursor.y < text.lines.high:
-      cursor.y += 1
-      cursor.x = 0
-    cursor.x = cursor.x.bound(0'i32..text{cursor.y}.len.int32)
+    moveRight cursor, text
   
   of KeyLeft:
-    cursor.y = cursor.y.bound(0'i32..text.lines.high.int32)
-    cursor.x = cursor.x.bound(0'i32..text{cursor.y}.len.int32)
-
-    cursor.x -= 1
-    if cursor.x < 0 and cursor.y > 0:
-      cursor.y -= 1
-      cursor.x = text{cursor.y}.len.int32
-    cursor.x = cursor.x.bound(0'i32..text{cursor.y}.len.int32)
+    moveLeft cursor, text
   
   of KeyDown:
     cursor.y += 1
@@ -306,3 +316,18 @@ proc text_editor_onButtonDown*(
       cursor.x = cursor.x.bound(0'i32..text{cursor.y}.len.int32)
   
   else: discard
+
+
+proc text_editor_onRuneInput*(
+  rune: Rune,
+  cursor: var IVec2,
+  text: var Text,
+  onTextChange: proc(),
+) =
+  if rune.int32 in 0..31: return
+  
+  bound cursor, text
+  text.insert [rune], cursor.x.int, cursor.y.int
+  moveRight cursor, text
+  
+  onTextChange()

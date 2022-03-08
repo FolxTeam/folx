@@ -238,6 +238,19 @@ window.onButtonPress = proc(button: Button) =
   
   display()
 
+window.onRune = proc(rune: Rune) =
+  if not main_explorer.display:
+    text_editor_onRuneInput(
+      rune = rune,
+      cursor = cursor,
+      text = opened_file,
+      onTextChange = proc =
+        text_colors = opened_file.parseNimCode(NimParseState(), opened_file.len).segments.colors
+        assert text_colors.len == opened_file.len
+        text_indentation = toSeq(0..opened_file.lines.high).mapit(opened_file{it}.toOpenArray.toSeq).indentation
+        display()
+    )
+
 
 display()
 window.visible = true

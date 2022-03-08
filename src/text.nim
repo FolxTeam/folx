@@ -1,4 +1,4 @@
-import unicode
+import unicode, sequtils
 
 type
   SeqView*[T] = object
@@ -11,6 +11,10 @@ type
     ## todo: make data structure more efficient for text editing
     runes: seq[Rune]
     lines*: seq[tuple[first, last: int]]
+
+
+proc bound*[T](x: T, s: HSlice[T, T]): T = x.max(s.a).min(s.b)
+proc bound*[T](x, s: HSlice[T, T]): HSlice[T, T] = HSlice[T, T](a: x.a.bound(s), b: x.b.bound(s))
 
 
 proc slice*[T](x: seq[T]; first, last: int): SeqView[T] =
@@ -53,7 +57,7 @@ proc `[]`*(text: Text, i: int): Rune =
   ## get char by index
   text.runes[i]
 
-proc `[]`*(text: Text; line, col: int): Rune =
+proc `[]`*(text: Text; col, line: int): Rune =
   ## get char by line and column
   assert col in 0 .. text.lines[line].last - text.lines[line].first
   text.runes[text.lines[line].first + col]
@@ -70,3 +74,18 @@ proc `[]`*[A, B](text: Text, slice: HSlice[A, B]): SeqView[Rune] =
 
 proc len*(text: Text): int = text.runes.len
 proc high*(text: Text): int = text.runes.high
+
+
+proc insert*(text: var Text; v: openarray[Rune]; col, line: int) =
+  if text.lines.len == 0 or v.len == 0: return
+
+  let
+    line = line.bound(0..text.lines.high)
+    col = col.bound(0..text{line}.len)
+  
+  text.runes.insert v, text.lines[line].first + col
+
+  text.lines[line].last += v.len
+  for i in line+1 .. text.lines.high:
+    text.lines[i].first += v.len
+    text.lines[i].last += v.len

@@ -89,7 +89,7 @@ proc parseNimCode*(s: Text, state: NimParseState, len = 100): tuple[segments: se
             "finally", "for", "if", "raise", "return", "try", "when", "while", "yield":
             sControlFlow
           
-          of "and", "as", "cast", "div", "in", "isnot", "is", "mod", "notin", "not", "or", "shl", "shr", "xor":
+          of "and", "as", "cast", "div", "in", "isnot", "is", "mod", "notin", "not", "or", "shl", "shr", "xor", "echo":
             sOperatorWord
           
           of "int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "uint64", "float32", "float64", 
