@@ -36,6 +36,7 @@ proc folx(files: seq[string] = @[], workspace: string = "", args: seq[string]) =
     else: files[0].splitPath.head
   
   let window = newWindow("folx", config.window.size, visible=false)
+  window.runeInputEnabled = true
 
   var
     editor_gt    = readFont(config.font).newGlyphTable(config.fontSize)
