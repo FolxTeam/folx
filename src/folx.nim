@@ -1,6 +1,6 @@
 import sequtils, os, times, math, unicode, std/monotimes, options
 import pixwindy, pixie, cligen
-import render, syntax_highlighting, configuration, text_editor, side_explorer, git, text
+import render, syntax_highlighting, configuration, text_editor, side_explorer, git
 
 
 proc status_bar(
@@ -41,27 +41,20 @@ proc folx(files: seq[string] = @[], workspace: string = "", args: seq[string]) =
     editor_gt    = readFont(config.font).newGlyphTable(config.fontSize)
     interface_gt = readFont(config.interfaceFont).newGlyphTable(config.interfaceFontSize)
 
-    opened_file: Text
-    
-    text_indentation: Indentation
-    text_colors: seq[ColorRgb]
+    text_editor: TextEditor
 
     displayRequest = false
     image = newImage(1280, 720)
     r = image.newContext
 
-    pos = 0'f32
-    visual_pos = pos
-    cursor = ivec2(0, 0)
+    # for explorer
+    pos = 0.0'f32
 
   var main_explorer = SideExplorer(current_dir: workspace, item_index: 1, display: false, pos: 0)
 
   proc open_file(file: string) =
     window.title = file & " - folx"
-    opened_file = newText(file.readFile)
-    text_colors = opened_file.parseNimCode(NimParseState(), opened_file.len).segments.colors
-    assert text_colors.len == opened_file.len
-    text_indentation = toSeq(0..opened_file.lines.high).mapit(opened_file{it}.toOpenArray.toSeq).indentation
+    text_editor = newTextEditor(file)
 
   open_file files[0]
 
@@ -86,25 +79,11 @@ proc folx(files: seq[string] = @[], workspace: string = "", args: seq[string]) =
         
         # if position changed, signal to display by setting result to true
         if pvp != (main_explorer.pos * fontSize).round.int32: result = true
-    else:
-      if pos != visual_pos:
-        let
-          fontSize = editor_gt.font.size
-          pvp = (visual_pos * fontSize).round.int32  # visual position in pixels
-          
-          # position delta
-          d = (abs(pos - visual_pos) * pow(1 / 2, (1 / dt) / 50)).max(0.1).min(abs(pos - visual_pos))
-
-        # move position by delta
-        if pos > visual_pos: visual_pos += d
-        else:                visual_pos -= d
-
-        # if position close to integer number, round it
-        if abs(visual_pos - pos) < 1 / fontSize / 2.1:
-          visual_pos = pos
-        
-        # if position changed, signal to display by setting result to true
-        if pvp != (visual_pos * fontSize).round.int32: result = true
+    
+    result = result or text_editor.animate(
+      dt = dt,
+      gt = editor_gt
+    )
 
 
   proc display =
@@ -135,12 +114,8 @@ proc folx(files: seq[string] = @[], workspace: string = "", args: seq[string]) =
       r.text_editor(
         box = rect(vec2(box.w, 0), window.size.vec2 - vec2(box.w, 20)),
         gt = editor_gt,
-        pos = visual_pos,
         bg = colorTheme.textarea,
-        text = opened_file,
-        colors = text_colors,
-        indentation = text_indentation,
-        cursor = cursor,
+        editor = text_editor,
       )
 
       r.status_bar(
@@ -162,12 +137,8 @@ proc folx(files: seq[string] = @[], workspace: string = "", args: seq[string]) =
       r.text_editor(
         box = rect(vec2(0, 0), window.size.vec2 - vec2(0, 20)),
         gt = editor_gt,
-        pos = visual_pos,
         bg = colorTheme.textarea,
-        text = opened_file,
-        colors = text_colors,
-        indentation = text_indentation,
-        cursor = cursor,
+        editor = text_editor,
       )
 
       r.status_bar(
@@ -175,14 +146,14 @@ proc folx(files: seq[string] = @[], workspace: string = "", args: seq[string]) =
         gt = interface_gt,
         bg = colorTheme.statusBarBg,
         fields = @[
-          ("line", $cursor[1]),
-          ("col", $cursor[0]),
+          ("line", $text_editor.cursor[1]),
+          ("col", $text_editor.cursor[0]),
         ] & (
           if main_explorer.current_dir.gitBranch.isSome: @[
             ("git", main_explorer.current_dir.gitBranch.get),
           ] else: @[]
         ) & @[
-          ("visual_pos", $visual_pos),  
+          ("visual_pos", $text_editor.visual_pos),  
         ]
       )
 
@@ -208,9 +179,13 @@ proc folx(files: seq[string] = @[], workspace: string = "", args: seq[string]) =
       clear editor_gt
       displayRequest = true
     else:
-      let lines_count = if main_explorer.display: main_explorer.count_items.float32 else: opened_file.lines.high.float32
-      pos = (pos - window.scrollDelta.y * 3).max(0).min(lines_count)
-
+      if main_explorer.display:
+        let lines_count = main_explorer.count_items.float32
+        pos = (pos - window.scrollDelta.y * 3).max(0).min(lines_count)
+      else:
+        text_editor.onScroll(
+          delta = window.scrollDelta,
+        )
 
 
   window.onResize = proc =
@@ -226,8 +201,6 @@ proc folx(files: seq[string] = @[], workspace: string = "", args: seq[string]) =
       if main_explorer.display:
         pos = main_explorer.pos
         main_explorer.updateDir config.file
-      else:
-        pos = visual_pos
 
     elif main_explorer.display:
       side_explorer_onButtonDown(
@@ -240,27 +213,20 @@ proc folx(files: seq[string] = @[], workspace: string = "", args: seq[string]) =
       )
 
     else:
-      text_editor_onButtonDown(
+      text_editor.onButtonDown(
         button = button,
-        cursor = cursor,
         window = window,
-        pos = pos,
-        text = opened_file,
       )
     
     display()
 
   window.onRune = proc(rune: Rune) =
     if not main_explorer.display:
-      text_editor_onRuneInput(
+      text_editor.onRuneInput(
         rune = rune,
-        cursor = cursor,
-        text = opened_file,
-        onTextChange = proc =
-          text_colors = opened_file.parseNimCode(NimParseState(), opened_file.len).segments.colors
-          assert text_colors.len == opened_file.len
-          text_indentation = toSeq(0..opened_file.lines.high).mapit(opened_file{it}.toOpenArray.toSeq).indentation
+        onTextChange = (proc =
           display()
+        )
       )
 
   display()

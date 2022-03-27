@@ -5,6 +5,20 @@ import render, syntax_highlighting, configuration, text
 type
   Indentation* = seq[tuple[len: seq[int], has_graph: bool]]
 
+  TextEditor* = object
+    pos*, visual_pos*: float32
+    text*: Text
+    colors*: seq[ColorRgb]
+    indentation*: Indentation
+    cursor*: IVec2
+
+
+proc bound(cursor: var IVec2, text: Text) =
+  if text.len < 0: return
+
+  cursor.y = cursor.y.bound(0'i32..text.lines.high.int32)
+  cursor.x = cursor.x.bound(0'i32..text{cursor.y}.len.int32)
+
 
 proc color*(sk: CodeKind): ColorRGB =
   case sk
@@ -77,6 +91,13 @@ proc indentation*(text: seq[seq[Rune]]): Indentation =
     elif result[i].len.len > lgl: result[i].len = result[i].len[0..<lgl]
 
 
+proc newTextEditor*(file: string): TextEditor =
+  result.text = newText(file.readFile)
+  result.colors = result.text.parseNimCode(NimParseState(), result.text.len).segments.colors
+  assert result.colors.len == result.text.len
+  result.indentation = toSeq(0..result.text.lines.high).mapit(result.text{it}.toOpenArray.toSeq).indentation
+
+
 proc text_area(
   r: Context,
   box: Rect,
@@ -116,12 +137,11 @@ proc line_numbers(
   bg: ColorRgb,
   lineCount: int,
   cursor: IVec2,
-  total: int,
   ) =
   let
     size = (box.h / gt.font.size).ceil.int
     dy = round(gt.font.size * 1.27)
-    right = (box.w + toRunes($total).width(gt).float32) / 2
+    right = (box.w + toRunes($lineCount).width(gt).float32) / 2
 
   var y = round(box.y - gt.font.size * 1.27 * (pos mod 1))
   for i in (pos.int..pos.ceil.int+size).bound(0..<lineCount):
@@ -189,61 +209,72 @@ proc cursor(
 proc text_editor*(
   r: Context,
   box: Rect,
+  editor: TextEditor,
   gt: var GlyphTable,
   bg: ColorRgb,
-  pos: float32,
-  text: Text,
-  colors: seq[ColorRgb],
-  indentation: Indentation,
-  cursor: IVec2,
   ) =
   let
     size = (box.h / gt.font.size).ceil.int
-    total = text.lines.len
+    total = editor.text.lines.len
 
     line_number_width = float32 ($total).toRunes.width(gt)
   
   r.line_numbers(
     box = rect(box.xy + vec2(0, 0), vec2(line_number_width + 20, box.h)),
     gt = gt,
-    pos = pos,
+    pos = editor.visual_pos,
     bg = colorTheme.textarea,
     lineCount = total,
-    cursor = cursor,
-    total = total,
+    cursor = editor.cursor,
   )
 
   r.text_area(
     box = rect(box.xy + vec2(line_number_width + 20, 0), box.wh - vec2(10, 0) - vec2(line_number_width + 20, 0)),
     gt = gt,
-    pos = pos,
+    pos = editor.visual_pos,
     bg = colorTheme.textarea,
-    text = text,
-    colors = colors,
-    indentation = indentation,
+    text = editor.text,
+    colors = editor.colors,
+    indentation = editor.indentation,
   )
 
   r.cursor(
     box = rect(box.xy + vec2(line_number_width + 20, 0), box.wh - vec2(10, 0) - vec2(line_number_width + 20, 0)),
     gt = gt,
-    pos = pos,
-    cpos = cursor,
-    text = text,
+    pos = editor.visual_pos,
+    cpos = editor.cursor,
+    text = editor.text,
   )
 
   r.scroll_bar(
     box = rect(box.xy + vec2(box.w - 10, 0), vec2(10, box.h)),
-    pos = pos,
+    pos = editor.visual_pos,
     size = size,
     total = total + size - 1,
   )
 
 
-proc bound(cursor: var IVec2, text: Text) =
-  if text.len < 0: return
+proc animate*(editor: var TextEditor, dt: float32, gt: GlyphTable): bool =
+  if editor.pos != editor.visual_pos:
+    let
+      fontSize = gt.font.size
+      pvp = (editor.visual_pos * fontSize).round.int32  # visual position in pixels
+      
+      # position delta
+      d = (abs(editor.pos - editor.visual_pos) * pow(1 / 2, (1 / dt) / 50)).max(0.1).min(abs(editor.pos - editor.visual_pos))
 
-  cursor.y = cursor.y.bound(0'i32..text.lines.high.int32)
-  cursor.x = cursor.x.bound(0'i32..text{cursor.y}.len.int32)
+    # move position by delta
+    if editor.pos > editor.visual_pos:
+      editor.visual_pos += d
+    else:
+      editor.visual_pos -= d
+
+    # if position close to integer number, round it
+    if abs(editor.visual_pos - editor.pos) < 1 / fontSize / 2.1:
+      editor.visual_pos = editor.pos
+    
+    # if position changed, signal to display by setting result to true
+    if pvp != (editor.visual_pos * fontSize).round.int32: result = true
 
 
 proc moveRight(cursor: var IVec2, text: Text) =
@@ -267,67 +298,75 @@ proc moveLeft(cursor: var IVec2, text: Text) =
 
 
 
-proc text_editor_onButtonDown*(
+proc onButtonDown*(
+  editor: var TextEditor,
   button: Button,
-  cursor: var IVec2,
   window: Window,
-  pos: var float32,
-  text: Text,
   ) =
-  if text.len < 0: return
+  if editor.text.len < 0: return
 
   case button
   of KeyRight:
-    moveRight cursor, text
+    moveRight editor.cursor, editor.text
   
   of KeyLeft:
-    moveLeft cursor, text
+    moveLeft editor.cursor, editor.text
   
   of KeyDown:
-    cursor.y += 1
-    cursor.y = cursor.y.bound(0'i32..text.lines.high.int32)
+    editor.cursor.y += 1
+    editor.cursor.y = editor.cursor.y.bound(0'i32..editor.text.lines.high.int32)
   
   of KeyUp:
-    cursor.y -= 1
-    cursor.y = cursor.y.bound(0'i32..text.lines.high.int32)
+    editor.cursor.y -= 1
+    editor.cursor.y = editor.cursor.y.bound(0'i32..editor.text.lines.high.int32)
   
   of KeyHome:
     if window.buttonDown[KeyLeftControl]:
-      cursor.y = 0
-      cursor.y = cursor.y.bound(0'i32..text.lines.high.int32)
+      editor.cursor.y = 0
+      editor.cursor.y = editor.cursor.y.bound(0'i32..editor.text.lines.high.int32)
 
-      cursor.x = 0
-      cursor.x = cursor.x.bound(0'i32..text{cursor.y}.len.int32)
-      pos = 0'f32
+      editor.cursor.x = 0
+      editor.cursor.x = editor.cursor.x.bound(0'i32..editor.text{editor.cursor.y}.len.int32)
+      editor.pos = 0'f32
     else:
-      cursor.x = 0
-      cursor.x = cursor.x.bound(0'i32..text{cursor.y}.len.int32)
+      editor.cursor.x = 0
+      editor.cursor.x = editor.cursor.x.bound(0'i32..editor.text{editor.cursor.y}.len.int32)
 
   of KeyEnd:
     if window.buttonDown[KeyLeftControl]:
-      cursor.y = text.lines.high.int32
-      cursor.y = cursor.y.bound(0'i32..text.lines.high.int32)
+      editor.cursor.y = editor.text.lines.high.int32
+      editor.cursor.y = editor.cursor.y.bound(0'i32..editor.text.lines.high.int32)
 
-      cursor.x = text{cursor.y}.len.int32
-      cursor.x = cursor.x.bound(0'i32..text{cursor.y}.len.int32)
-      pos = text.lines.high.float32
+      editor.cursor.x = editor.text{editor.cursor.y}.len.int32
+      editor.cursor.x = editor.cursor.x.bound(0'i32..editor.text{editor.cursor.y}.len.int32)
+      editor.pos = editor.text.lines.high.float32
     else:
-      cursor.x = text{cursor.y}.len.int32
-      cursor.x = cursor.x.bound(0'i32..text{cursor.y}.len.int32)
+      editor.cursor.x = editor.text{editor.cursor.y}.len.int32
+      editor.cursor.x = editor.cursor.x.bound(0'i32..editor.text{editor.cursor.y}.len.int32)
   
   else: discard
 
 
-proc text_editor_onRuneInput*(
+proc onRuneInput*(
+  editor: var TextEditor,
   rune: Rune,
-  cursor: var IVec2,
-  text: var Text,
   onTextChange: proc(),
 ) =
   if rune.int32 in 0..31: return
   
-  bound cursor, text
-  text.insert [rune], cursor.x.int, cursor.y.int
-  moveRight cursor, text
-  
+  bound editor.cursor, editor.text
+  editor.text.insert [rune], editor.cursor.x.int, editor.cursor.y.int
+  moveRight editor.cursor, editor.text
+
+  editor.colors = editor.text.parseNimCode(NimParseState(), editor.text.len).segments.colors
+  assert editor.colors.len == editor.text.len
+  editor.indentation = toSeq(0..editor.text.lines.high).mapit(editor.text{it}.toOpenArray.toSeq).indentation
+
   onTextChange()
+
+
+proc onScroll*(
+  editor: var TextEditor,
+  delta: Vec2,
+) =
+  editor.pos = (editor.pos - delta.y * 3).max(0).min(editor.text.lines.len.float32)
