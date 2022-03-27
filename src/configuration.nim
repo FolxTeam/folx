@@ -81,7 +81,7 @@ const defaultConfig = Config(
     size: ivec2(1280, 720),
   ),
 
-  file: "src/folx.nim",
+  file: "",
   workspace: getHomeDir()
 )
 static: writeFile "config.default.json", defaultConfig.toJson.parseJson.pretty
@@ -120,7 +120,21 @@ proc newHook*(x: var ColorTheme) =
   x = defaultColorTheme
 
 
-proc readConfig*(file="config.json"): Config =
+let configDir* =
+  when defined(linux): getHomeDir()/".config"/"folx"
+  elif defined(windows): getHomeDir()/"AppData"/"Roaming"/"folx"
+  else: "."
+
+let dataDir* =
+  when defined(linux): getHomeDir()/".local"/"share"/"folx"
+  elif defined(windows): getHomeDir()/"AppData"/"Roaming"/"folx"
+  else: "."
+
+createDir configDir
+createDir dataDir
+
+
+proc readConfig*(file = configDir/"config.json"): Config =
   try:    file.readFile.fromJson(Config)
   except: defaultConfig
 
@@ -131,3 +145,17 @@ proc readTheme*(file: string): ColorTheme =
 
 let config* = readConfig()
 let colorTheme* = readTheme(config.colorTheme)
+
+
+proc writeConfig*(file = configDir/"config.json") =
+  createDir file.splitPath.head
+  writeFile file, config.toJson.parseJson.pretty
+
+writeConfig()
+
+
+proc resource*(file: string): string =
+  dataDir/"resources"/file
+
+
+setCurrentDir dataDir

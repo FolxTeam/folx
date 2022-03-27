@@ -46,6 +46,7 @@ proc folx(files: seq[string] = @[], workspace: string = "", args: seq[string]) =
     editor_gt    = readFont(config.font).newGlyphTable(config.fontSize)
     interface_gt = readFont(config.interfaceFont).newGlyphTable(config.interfaceFontSize)
 
+    opened_files: seq[string]
     text_editor: TextEditor
 
     displayRequest = false
@@ -60,8 +61,10 @@ proc folx(files: seq[string] = @[], workspace: string = "", args: seq[string]) =
   proc open_file(file: string) =
     window.title = file & " - folx"
     text_editor = newTextEditor(file)
+    opened_files = @[file]
 
-  open_file files[0]
+  if files[0] != "":
+    open_file files[0]
 
   proc animate(dt: float32): bool =
     # todo: refactor repeat code
@@ -85,10 +88,11 @@ proc folx(files: seq[string] = @[], workspace: string = "", args: seq[string]) =
         # if position changed, signal to display by setting result to true
         if pvp != (main_explorer.pos * fontSize).round.int32: result = true
     
-    result = result or text_editor.animate(
-      dt = dt,
-      gt = editor_gt
-    )
+    if opened_files.len != 0:
+      result = result or text_editor.animate(
+        dt = dt,
+        gt = editor_gt
+      )
 
 
   proc display =
@@ -116,12 +120,13 @@ proc folx(files: seq[string] = @[], workspace: string = "", args: seq[string]) =
         nesting = 0,
       )
 
-      r.text_editor(
-        box = rect(vec2(box.w, 0), window.size.vec2 - vec2(box.w, 20)),
-        gt = editor_gt,
-        bg = colorTheme.textarea,
-        editor = text_editor,
-      )
+      if opened_files.len != 0:
+        r.text_editor(
+          box = rect(vec2(box.w, 0), window.size.vec2 - vec2(box.w, 20)),
+          gt = editor_gt,
+          bg = colorTheme.textarea,
+          editor = text_editor,
+        )
 
       r.status_bar(
         box = rect(vec2(0, window.size.vec2.y - 20), vec2(window.size.vec2.x, 20)),
@@ -139,12 +144,13 @@ proc folx(files: seq[string] = @[], workspace: string = "", args: seq[string]) =
         ]
       )
     else:  
-      r.text_editor(
-        box = rect(vec2(0, 0), window.size.vec2 - vec2(0, 20)),
-        gt = editor_gt,
-        bg = colorTheme.textarea,
-        editor = text_editor,
-      )
+      if opened_files.len != 0:
+        r.text_editor(
+          box = rect(vec2(0, 0), window.size.vec2 - vec2(0, 20)),
+          gt = editor_gt,
+          bg = colorTheme.textarea,
+          editor = text_editor,
+        )
 
       r.status_bar(
         box = rect(vec2(0, window.size.vec2.y - 20), vec2(window.size.vec2.x, 20)),
@@ -183,18 +189,19 @@ proc folx(files: seq[string] = @[], workspace: string = "", args: seq[string]) =
       
       clear editor_gt
       displayRequest = true
+
     else:
       if main_explorer.display:
         if window.mousePos in rect(vec2(0, 0), vec2(200, window.size.vec2.y)):
           let lines_count = main_explorer.count_items.float32
           pos = (pos - window.scrollDelta.y * 3).max(0).min(lines_count)
         
-        else:
+        elif opened_files.len != 0:
           text_editor.onScroll(
             delta = window.scrollDelta,
           )
       
-      else:
+      elif opened_files.len != 0:
         text_editor.onScroll(
           delta = window.scrollDelta,
         )
@@ -224,7 +231,7 @@ proc folx(files: seq[string] = @[], workspace: string = "", args: seq[string]) =
         ),
       )
 
-    else:
+    elif opened_files.len != 0:
       text_editor.onButtonDown(
         button = button,
         window = window,
@@ -234,7 +241,7 @@ proc folx(files: seq[string] = @[], workspace: string = "", args: seq[string]) =
     display()
 
   window.onRune = proc(rune: Rune) =
-    if not main_explorer.display:
+    if not main_explorer.display and opened_files.len != 0:
       text_editor.onRuneInput(
         rune = rune,
         onTextChange = (proc =

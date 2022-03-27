@@ -17,3 +17,4 @@ bindings/generated
 /config.json
 /config.default.json
 /resources/themes/default.json
+/build
