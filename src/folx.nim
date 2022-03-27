@@ -2,6 +2,10 @@ import sequtils, os, times, math, unicode, std/monotimes, options
 import pixwindy, pixie, cligen
 import render, syntax_highlighting, configuration, text_editor, side_explorer, git
 
+proc contains*(b: Rect, a: GVec2): bool =
+  let a = a.vec2
+  a.x >= b.x and a.x <= b.x + b.w and a.y >= b.y and a.y <= b.y + b.h
+
 
 proc status_bar(
   r: Context,
@@ -181,8 +185,15 @@ proc folx(files: seq[string] = @[], workspace: string = "", args: seq[string]) =
       displayRequest = true
     else:
       if main_explorer.display:
-        let lines_count = main_explorer.count_items.float32
-        pos = (pos - window.scrollDelta.y * 3).max(0).min(lines_count)
+        if window.mousePos in rect(vec2(0, 0), vec2(200, window.size.vec2.y)):
+          let lines_count = main_explorer.count_items.float32
+          pos = (pos - window.scrollDelta.y * 3).max(0).min(lines_count)
+        
+        else:
+          text_editor.onScroll(
+            delta = window.scrollDelta,
+          )
+      
       else:
         text_editor.onScroll(
           delta = window.scrollDelta,
