@@ -21,7 +21,9 @@ proc slice*[T](x: seq[T]; first, last: int): SeqView[T] =
   ## get slice view to seq
   ## note: seq lifetime must be >= slice lifetime
   SeqView[T](
-    data: cast[ptr UncheckedArray[T]](x[first].unsafeaddr),
+    data:
+      if x.len == 0: nil
+      else: cast[ptr UncheckedArray[T]](cast[int](x[0].unsafeaddr) + first * T.sizeof),
     len: last - first + 1
   )
 
@@ -37,17 +39,18 @@ proc lines(s: seq[Rune]): seq[tuple[first, last: int]] =
   template rune(x): Rune = static(x.runeAt(0))
   var b = 0
   var p = 0
-  while p < s.high:
+  while p < s.len:
     if s[p] == "\n".rune:
       result.add (b, p - 1)
       inc p
       b = p
-    elif s[p] == "\r".rune and p + 1 < s.high and s[p + 1] == "\n".rune:
+    elif s[p] == "\r".rune and p + 1 < s.len and s[p + 1] == "\n".rune:
       result.add (b, p - 1)
       inc p, 2
       b = p
     else:
       inc p
+  result.add (b, p - 1)
 
 
 proc newText*(runes: sink seq[Rune]): Text =
