@@ -23,8 +23,17 @@ proc status_bar(
   r.image.draw toRunes(s), sText.color, box.xy + margin, rect(box.xy, box.wh - margin), gt, bg
 
 
-proc folx(files: seq[string] = @[config.file], workspace = config.workspace, args: seq[string]) =
-  let files = if args.len == 0: files else: args
+proc folx(files: seq[string] = @[], workspace: string = "", args: seq[string]) =
+  let files =
+    if files.len != 0 or (args.len != 0 and not args.any(dirExists)): files & args
+    elif files.len != 0: files
+    else: @[config.file]
+  
+  let workspace = absolutePath:
+    if workspace != "": workspace
+    elif args.len != 0 and args[0].dirExists: args[0]
+    elif files.len == 0 or files == @[config.file]: config.workspace
+    else: files[0].splitPath.head
   
   let window = newWindow("folx", config.window.size, visible=false)
 
@@ -45,7 +54,7 @@ proc folx(files: seq[string] = @[config.file], workspace = config.workspace, arg
     visual_pos = pos
     cursor = ivec2(0, 0)
 
-  var main_explorer = SideExplorer(current_dir: config.workspace, item_index: 1, display: false, pos: 0)
+  var main_explorer = SideExplorer(current_dir: workspace, item_index: 1, display: false, pos: 0)
 
   proc open_file(file: string) =
     window.title = file & " - folx"
