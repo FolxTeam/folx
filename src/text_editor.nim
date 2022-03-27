@@ -286,7 +286,6 @@ proc moveRight(cursor: var IVec2, text: Text) =
     cursor.x = 0
   cursor.x = cursor.x.bound(0'i32..text{cursor.y}.len.int32)
 
-
 proc moveLeft(cursor: var IVec2, text: Text) =
   bound cursor, text
   
@@ -296,12 +295,44 @@ proc moveLeft(cursor: var IVec2, text: Text) =
     cursor.x = text{cursor.y}.len.int32
   cursor.x = cursor.x.bound(0'i32..text{cursor.y}.len.int32)
 
+proc moveDown(cursor: var IVec2, text: Text) =
+  cursor.y += 1
+  cursor.y = cursor.y.bound(0'i32..text.lines.high.int32)
+
+proc moveUp(cursor: var IVec2, text: Text) =
+  cursor.y -= 1
+  cursor.y = cursor.y.bound(0'i32..text.lines.high.int32)
+
+proc moveToLineStart(cursor: var IVec2, text: Text) =
+  cursor.x = 0
+  cursor.x = cursor.x.bound(0'i32..text{cursor.y}.len.int32)
+
+proc moveToLineEnd(cursor: var IVec2, text: Text) =
+  cursor.x = text{cursor.y}.len.int32
+  cursor.x = cursor.x.bound(0'i32..text{cursor.y}.len.int32)
+
+proc moveToFileStart(cursor: var IVec2, text: Text, pos: var float32) =
+  cursor.y = 0
+  cursor.y = cursor.y.bound(0'i32..text.lines.high.int32)
+
+  cursor.x = 0
+  cursor.x = cursor.x.bound(0'i32..text{cursor.y}.len.int32)
+  pos = 0'f32
+
+proc moveToFileEnd(cursor: var IVec2, text: Text, pos: var float32) =
+  cursor.y = text.lines.high.int32
+  cursor.y = cursor.y.bound(0'i32..text.lines.high.int32)
+
+  cursor.x = text{cursor.y}.len.int32
+  cursor.x = cursor.x.bound(0'i32..text{cursor.y}.len.int32)
+  pos = text.lines.high.float32
 
 
 proc onButtonDown*(
   editor: var TextEditor,
   button: Button,
   window: Window,
+  onTextChange: proc(),
   ) =
   if editor.text.len < 0: return
 
@@ -313,36 +344,41 @@ proc onButtonDown*(
     moveLeft editor.cursor, editor.text
   
   of KeyDown:
-    editor.cursor.y += 1
-    editor.cursor.y = editor.cursor.y.bound(0'i32..editor.text.lines.high.int32)
+    moveDown editor.cursor, editor.text
   
   of KeyUp:
-    editor.cursor.y -= 1
-    editor.cursor.y = editor.cursor.y.bound(0'i32..editor.text.lines.high.int32)
+    moveUp editor.cursor, editor.text
   
   of KeyHome:
     if window.buttonDown[KeyLeftControl]:
-      editor.cursor.y = 0
-      editor.cursor.y = editor.cursor.y.bound(0'i32..editor.text.lines.high.int32)
-
-      editor.cursor.x = 0
-      editor.cursor.x = editor.cursor.x.bound(0'i32..editor.text{editor.cursor.y}.len.int32)
-      editor.pos = 0'f32
+      moveToFileStart editor.cursor, editor.text, editor.pos
     else:
-      editor.cursor.x = 0
-      editor.cursor.x = editor.cursor.x.bound(0'i32..editor.text{editor.cursor.y}.len.int32)
+      moveToLineStart editor.cursor, editor.text
 
   of KeyEnd:
     if window.buttonDown[KeyLeftControl]:
-      editor.cursor.y = editor.text.lines.high.int32
-      editor.cursor.y = editor.cursor.y.bound(0'i32..editor.text.lines.high.int32)
-
-      editor.cursor.x = editor.text{editor.cursor.y}.len.int32
-      editor.cursor.x = editor.cursor.x.bound(0'i32..editor.text{editor.cursor.y}.len.int32)
-      editor.pos = editor.text.lines.high.float32
+      moveToFileEnd editor.cursor, editor.text, editor.pos
     else:
-      editor.cursor.x = editor.text{editor.cursor.y}.len.int32
-      editor.cursor.x = editor.cursor.x.bound(0'i32..editor.text{editor.cursor.y}.len.int32)
+      moveToLineEnd editor.cursor, editor.text
+  
+  of KeyBackspace:
+    bound editor.cursor, editor.text
+
+    if editor.cursor.x == 0:
+      ## todo: erase \n
+    
+    else:
+      editor.text.erase editor.cursor.x.int - 1, editor.cursor.y.int
+      if editor.cursor.x <= editor.text{editor.cursor.y}.len.int32:
+        moveLeft editor.cursor, editor.text
+      else:
+        bound editor.cursor, editor.text
+
+      editor.colors = editor.text.parseNimCode(NimParseState(), editor.text.len).segments.colors
+      assert editor.colors.len == editor.text.len
+      editor.indentation = toSeq(0..editor.text.lines.high).mapit(editor.text{it}.toOpenArray.toSeq).indentation
+
+      onTextChange()
   
   else: discard
 

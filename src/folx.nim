@@ -228,6 +228,7 @@ proc folx(files: seq[string] = @[], workspace: string = "", args: seq[string]) =
       text_editor.onButtonDown(
         button = button,
         window = window,
+        onTextChange = (proc = discard),
       )
     
     display()

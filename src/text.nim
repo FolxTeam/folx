@@ -27,6 +27,8 @@ proc slice*[T](x: seq[T]; first, last: int): SeqView[T] =
 
 template toOpenArray*[T](x: SeqView[T]): openarray[T] = toOpenArray(x.data, 0, x.len - 1)
 
+proc high*(x: SeqView): int = x.len - 1
+
 
 proc lines(s: seq[Rune]): seq[tuple[first, last: int]] =
   template rune(x): Rune = static(x.runeAt(0))
@@ -89,3 +91,18 @@ proc insert*(text: var Text; v: openarray[Rune]; col, line: int) =
   for i in line+1 .. text.lines.high:
     text.lines[i].first += v.len
     text.lines[i].last += v.len
+
+
+proc erase*(text: var Text; col, line: int) =
+  if text.lines.len == 0: return
+
+  let
+    line = line.bound(0..text.lines.high)
+    col = col.bound(0..text{line}.high)
+  
+  text.runes.delete text.lines[line].first + col
+
+  text.lines[line].last -= 1
+  for i in line+1 .. text.lines.high:
+    text.lines[i].first -= 1
+    text.lines[i].last -= 1
