@@ -61,9 +61,8 @@ proc colors*(scs: openarray[CodeKind]): seq[ColorRgb] =
   scs.map(color)
 
 
-proc indentation*(text: seq[seq[Rune]]): Indentation =
-  ## todo: use Text
-  proc indentation(line: seq[Rune], prev: seq[int]): tuple[len: seq[int], has_graph: bool] =
+proc indentation*(text: Text): Indentation =
+  proc indentation(line: SeqView[Rune], prev: seq[int]): tuple[len: seq[int], has_graph: bool] =
     var sl = block:
       var i = 0
       for c in line:
@@ -82,8 +81,8 @@ proc indentation*(text: seq[seq[Rune]]): Indentation =
       if sl > 0:
         result.len.add sl
 
-  for i, line in text:
-    result.add line.indentation(if i == 0: @[] else: result[^1].len)
+  for i in 0..text.lines.high:
+    result.add text{i}.indentation(if i == 0: @[] else: result[^1].len)
 
   var lgl = 0
   for i in countdown(result.high, 0):
@@ -95,7 +94,7 @@ proc newTextEditor*(file: string): TextEditor =
   result.text = newText(file.readFile)
   result.colors = result.text.parseNimCode(NimParseState(), result.text.len).segments.colors
   assert result.colors.len == result.text.len
-  result.indentation = toSeq(0..result.text.lines.high).mapit(result.text{it}.toOpenArray.toSeq).indentation
+  result.indentation = result.text.indentation
 
 
 proc text_area(
@@ -376,7 +375,7 @@ proc onButtonDown*(
 
       editor.colors = editor.text.parseNimCode(NimParseState(), editor.text.len).segments.colors
       assert editor.colors.len == editor.text.len
-      editor.indentation = toSeq(0..editor.text.lines.high).mapit(editor.text{it}.toOpenArray.toSeq).indentation
+      editor.indentation = editor.text.indentation
 
       onTextChange()
   
@@ -396,7 +395,7 @@ proc onRuneInput*(
 
   editor.colors = editor.text.parseNimCode(NimParseState(), editor.text.len).segments.colors
   assert editor.colors.len == editor.text.len
-  editor.indentation = toSeq(0..editor.text.lines.high).mapit(editor.text{it}.toOpenArray.toSeq).indentation
+  editor.indentation = editor.text.indentation
 
   onTextChange()
 

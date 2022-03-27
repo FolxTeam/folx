@@ -29,6 +29,9 @@ template toOpenArray*[T](x: SeqView[T]): openarray[T] = toOpenArray(x.data, 0, x
 
 proc high*(x: SeqView): int = x.len - 1
 
+iterator items*[T](x: SeqView[T]): T =
+  for i in 0..<x.len: yield x.data[i]
+
 
 proc lines(s: seq[Rune]): seq[tuple[first, last: int]] =
   template rune(x): Rune = static(x.runeAt(0))
