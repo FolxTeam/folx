@@ -148,9 +148,9 @@ proc explorer_area*(
 
     let text = file.name & file.ext & spaces_after_name & $file.info.size & spaces_after_size & $file.info.lastWriteTime.format("hh:mm dd/MM/yy")
     if i == int(expl.item_index):
-      r.fillStyle = colorTheme.statusBarBg
+      r.fillStyle = colorTheme.bgSelection
       r.fillRect rect(vec2(0,y), vec2(text.toRunes.width(gt).float32, dy))
-      r.image.draw toRunes(text), rgb(0, 0, 0), vec2(box.x, y), box, gt, colorTheme.statusBarBg
+      r.image.draw toRunes(text), rgb(0, 0, 0), vec2(box.x, y), box, gt, colorTheme.cInActive
 
     else:
       if file.info.kind == PathComponent.pcDir:

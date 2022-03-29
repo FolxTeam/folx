@@ -1,9 +1,16 @@
 {
-    "scrollbar": "c1c1c1",
-    "verticalLine": "d3d3d3",
-    "lineNumbers": "237893",
-    "lineNumbersSelect": "e4e6f1",
-    "textarea": "ffffff",
+    "cActive": "DDDDDD",
+    "cInActive": "AAAAAA",
+
+    "bgScrollBar": "c1c1c1",
+    "bgVerticalLine": "d3d3d3",
+    "bgLineNumbers": "ffffff",
+    "bgLineNumbersSelect": "e4e6f1",
+    "bgTextArea": "ffffff",
+    "bgStatusBar": "007ACC",
+    "bgExplorer": "262626",
+    "bgSelectionLabel": "38AFFF",
+    "bgSelection": "303030",
 
     "sKeyword": "0000ff",
     "sOperatorWord": "af00db",
@@ -16,6 +23,6 @@
     "sFunction": "795e26",
     "sComment": "008000",
     "sTodoComment": "ff8c00",
-    "sLineNumber": "237893",
+    "sLineNumber": "858585",
     "sText": "000000"
 }

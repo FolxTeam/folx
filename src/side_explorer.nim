@@ -51,6 +51,7 @@ let i_folder = readImage("resources/icons/folder.svg")
 let i_openfolder = readImage("resources/icons/openfolder.svg")
 let i_nim = readImage("resources/icons/nim.svg")
 let i_file = readImage("resources/icons/file.svg")
+let i_gitignore = readImage("resources/icons/gitignore.svg")
 
 proc getIcon(explorer: SideExplorer, file: File): Image =
   if OpenDir(path: file.path / file.name) in explorer.open_dirs:
@@ -58,10 +59,13 @@ proc getIcon(explorer: SideExplorer, file: File): Image =
   else:
     result = i_folder
 
-proc getIcon(ext: string): Image =
-  case ext
+proc getIcon(file: File): Image =
+  case file.ext
   of ".nim": result = i_nim
-  else: result = i_file
+  else: 
+    case file.name
+    of ".gitignore": result = i_gitignore
+    else: result = i_file
 
 
 proc newFiles(file_path: string): seq[File] =
@@ -152,8 +156,8 @@ proc drawDir(
   icon_const: float32
   ) =
 
-  image.draw(getIcon(explorer, file), translate(vec2(box.x + nesting_indent.toRunes.width(gt).float32, y)) * scale(vec2(icon_const * dy, icon_const * dy)))
-  r.image.draw text.toRunes, sStringLitEscape.color, vec2(box.x + 20, y), box, gt, bg
+  image.draw(getIcon(explorer, file), translate(vec2(box.x + 20 + nesting_indent.toRunes.width(gt).float32, y + 4)) * scale(vec2(icon_const * dy, icon_const * dy)))
+  r.image.draw text.toRunes, colorTheme.cActive, vec2(box.x + 40, y), box, gt, bg
   y += dy
 
 
@@ -173,12 +177,15 @@ proc drawSelectedDir(
 
   updateExplorer(explorer, file)
 
-  r.fillStyle = colorTheme.statusBarBg
+  r.fillStyle = colorTheme.bgSelection
   r.fillRect rect(vec2(0,y), vec2(box.w, dy))
-  
-  image.draw(getIcon(explorer, file), translate(vec2(box.x + nesting_indent.toRunes.width(gt).float32, y)) * scale(vec2(icon_const * dy, icon_const * dy)))
 
-  r.image.draw text.toRunes, rgb(0, 0, 0), vec2(box.x + 20, y), box, gt, colorTheme.statusBarBg
+  r.fillStyle = colorTheme.bgSelectionLabel
+  r.fillRect rect(vec2(0,y), vec2(2, dy))
+  
+  image.draw(getIcon(explorer, file), translate(vec2(box.x + 20 + nesting_indent.toRunes.width(gt).float32, y + 4)) * scale(vec2(icon_const * dy, icon_const * dy)))
+
+  r.image.draw text.toRunes, colorTheme.cActive, vec2(box.x + 40, y), box, gt, colorTheme.bgSelection
   y += dy
 
 
@@ -196,9 +203,9 @@ proc drawFile(
   icon_const: float32
   ) =
 
-  image.draw(getIcon(file.ext), translate(vec2(box.x + nesting_indent.toRunes.width(gt).float32, y)) * scale(vec2(icon_const * dy, icon_const * dy)))
+  image.draw(getIcon(file), translate(vec2(box.x + 20 + nesting_indent.toRunes.width(gt).float32, y + 4)) * scale(vec2(icon_const * dy, icon_const * dy)))
 
-  r.image.draw text.toRunes, sText.color, vec2(box.x + 20, y), box, gt, bg
+  r.image.draw text.toRunes, colorTheme.cActive, vec2(box.x + 40, y), box, gt, bg
   y += dy
     
 
@@ -218,12 +225,15 @@ proc drawSelectedFile(
 
   updateExplorer(explorer, file)
 
-  r.fillStyle = colorTheme.statusBarBg
+  r.fillStyle = colorTheme.bgSelection
   r.fillRect rect(vec2(0,y), vec2(box.w, dy))
 
-  image.draw(getIcon(file.ext), translate(vec2(box.x + nesting_indent.toRunes.width(gt).float32, y)) * scale(vec2(icon_const * dy, icon_const * dy)))
+  r.fillStyle = colorTheme.bgSelectionLabel
+  r.fillRect rect(vec2(0,y), vec2(2, dy))
 
-  r.image.draw text.toRunes, rgb(0, 0, 0), vec2(box.x + 20, y), box, gt, colorTheme.statusBarBg
+  image.draw(getIcon(file), translate(vec2(box.x + 20 + nesting_indent.toRunes.width(gt).float32, y + 4)) * scale(vec2(icon_const * dy, icon_const * dy)))
+
+  r.image.draw text.toRunes, colorTheme.cActive, vec2(box.x + 40, y), box, gt, colorTheme.bgSelection
   y += dy
 
 
@@ -284,7 +294,7 @@ proc side_explorer_area*(
           box = box,
           pos = pos,
           gt = gt,
-          bg = configuration.colorTheme.textarea,
+          bg = bg,
           dir = dir.files[i],
           explorer = explorer,
           count_items = count_items,

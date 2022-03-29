@@ -121,7 +121,7 @@ proc text_area(
 
     var x = box.x.round.int
     for i, l in indentation[i].len:
-      r.image.vertical_line x.int32, y.int32, dy.int32, box, colorTheme.verticaLline
+      r.image.vertical_line x.int32, y.int32, dy.int32, box, colorTheme.bgVerticalLine
       x += l * space_w
 
     y += dy
@@ -147,13 +147,12 @@ proc line_numbers(
     let s = toRunes $(i+1)
     let w = float32 s.width(gt)
     if i == cursor.y:
-      r.fillStyle = colorTheme.lineNumbersSelect.color
+      r.fillStyle = colorTheme.bgLineNumbersSelect.color
       r.fillRect rect(vec2(box.x,y), vec2(box.w, dy))
-      r.image.draw s, sLineNumber.color, vec2(box.x + right - w, y), box, gt, colorTheme.lineNumbersSelect
+      r.image.draw s, sLineNumber.color, vec2(box.x + right - w, y), box, gt, colorTheme.bgLineNumbersSelect
     else:
       r.image.draw s, sLineNumber.color, vec2(box.x + right - w, y), box, gt, bg
     y += round(gt.font.size * 1.27)
-
 
 proc scroll_bar(
   r: Context,
@@ -172,7 +171,7 @@ proc scroll_bar(
     vec2(box.w, box.h * (b - a))
   )
 
-  r.fillStyle = colorTheme.scrollbar
+  r.fillStyle = colorTheme.bgScrollBar
   r.fillRect box
 
 
@@ -222,7 +221,7 @@ proc text_editor*(
     box = rect(box.xy + vec2(0, 0), vec2(line_number_width + 20, box.h)),
     gt = gt,
     pos = editor.visual_pos,
-    bg = colorTheme.textarea,
+    bg = colorTheme.bgLineNumbers,
     lineCount = total,
     cursor = editor.cursor,
   )
@@ -231,7 +230,7 @@ proc text_editor*(
     box = rect(box.xy + vec2(line_number_width + 20, 0), box.wh - vec2(10, 0) - vec2(line_number_width + 20, 0)),
     gt = gt,
     pos = editor.visual_pos,
-    bg = colorTheme.textarea,
+    bg = colorTheme.bgTextArea,
     text = editor.text,
     colors = editor.colors,
     indentation = editor.indentation,

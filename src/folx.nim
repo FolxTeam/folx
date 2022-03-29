@@ -96,15 +96,22 @@ proc folx(files: seq[string] = @[], workspace: string = "", args: seq[string]) =
 
 
   proc display =
-    image.clear colorTheme.textarea.color.rgbx
+    image.clear colorTheme.bgTextArea.color.rgbx
 
     if main_explorer.display:
 
       var box = rect(vec2(0, 0), vec2(200, window.size.vec2.y))
       var dy = round(editor_gt.font.size * 1.27)
       var y = box.y - dy * (pos mod 1)
+      var middle_x = box.x + ( ( box.w - toRunes("Проводник").width(editor_gt).float32 ) / 2 )
 
-      r.image.draw toRunes(main_explorer.dir.path), sKeyword.color, vec2(box.x, y), box, editor_gt, configuration.colorTheme.textarea
+      r.fillStyle = colorTheme.bgExplorer
+      r.fillRect box
+
+      r.image.draw toRunes("Проводник"), colorTheme.cActive, vec2(middle_x.float32, y), box, editor_gt, configuration.colorTheme.bgExplorer
+      y += dy
+
+      r.image.draw toRunes(main_explorer.dir.path), colorTheme.cInActive, vec2(box.x, y), box, editor_gt, configuration.colorTheme.bgExplorer
       y += dy
 
       r.side_explorer_area(
@@ -112,7 +119,7 @@ proc folx(files: seq[string] = @[], workspace: string = "", args: seq[string]) =
         box = box,
         pos = main_explorer.pos,
         gt = editor_gt,
-        bg = configuration.colorTheme.textarea,
+        bg = configuration.colorTheme.bgExplorer,
         dir = main_explorer.dir,
         explorer = main_explorer,
         count_items = 0,
@@ -124,14 +131,14 @@ proc folx(files: seq[string] = @[], workspace: string = "", args: seq[string]) =
         r.text_editor(
           box = rect(vec2(box.w, 0), window.size.vec2 - vec2(box.w, 20)),
           gt = editor_gt,
-          bg = colorTheme.textarea,
+          bg = colorTheme.bgTextArea,
           editor = text_editor,
         )
 
       r.status_bar(
         box = rect(vec2(0, window.size.vec2.y - 20), vec2(window.size.vec2.x, 20)),
         gt = interface_gt,
-        bg = colorTheme.statusBarBg,
+        bg = colorTheme.bgStatusBar,
         fields = @[
           ("count_items", $main_explorer.count_items),
           ("item", $main_explorer.item_index),
@@ -148,14 +155,14 @@ proc folx(files: seq[string] = @[], workspace: string = "", args: seq[string]) =
         r.text_editor(
           box = rect(vec2(0, 0), window.size.vec2 - vec2(0, 20)),
           gt = editor_gt,
-          bg = colorTheme.textarea,
+          bg = colorTheme.bgTextArea,
           editor = text_editor,
         )
 
       r.status_bar(
         box = rect(vec2(0, window.size.vec2.y - 20), vec2(window.size.vec2.x, 20)),
         gt = interface_gt,
-        bg = colorTheme.statusBarBg,
+        bg = colorTheme.bgStatusBar,
         fields = @[
           ("line", $text_editor.cursor[1]),
           ("col", $text_editor.cursor[0]),

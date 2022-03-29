@@ -20,12 +20,18 @@ type
     size*: IVec2
 
   ColorTheme* = object
-    scrollbar*: ColorRGB
-    verticalLine*: ColorRGB
-    lineNumbers*: ColorRGB
-    lineNumbersSelect*: ColorRGB
-    textarea*: ColorRGB
-    statusBarBg*: ColorRGB
+    cActive*: ColorRGB
+    cInActive*: ColorRGB
+  
+    bgScrollBar*: ColorRGB
+    bgVerticalLine*: ColorRGB
+    bgLineNumbers*: ColorRGB
+    bgLineNumbersSelect*: ColorRGB
+    bgTextArea*: ColorRGB
+    bgStatusBar*: ColorRGB
+    bgExplorer*: ColorRGB
+    bgSelectionLabel*: ColorRGB
+    bgSelection*: ColorRGB
 
     sKeyword*: ColorRGB
     sOperatorWord*: ColorRGB
@@ -88,12 +94,19 @@ static: writeFile "config.default.json", defaultConfig.toJson.parseJson.pretty
 
 
 const defaultColorTheme = ColorTheme(
-  scrollbar: rgb(48, 48, 48),
-  verticalLine: rgb(64, 64, 64),
-  linenumbers: rgb(32, 32, 32),
-  linenumbersselect: rgb(15, 15, 15),
-  textarea: rgb(32, 32, 32),
-  statusBarBg: rgb(0, 122, 204),
+
+  cActive: rgb(221, 221, 221),
+  cInActive: rgb(170, 170, 170),
+
+  bgScrollBar: rgb(48, 48, 48),
+  bgVerticalLine: rgb(64, 64, 64),
+  bgLineNumbers: rgb(32, 32, 32),
+  bgLineNumbersSelect: rgb(15, 15, 15),
+  bgTextArea: rgb(32, 32, 32),
+  bgStatusBar: rgb(0, 122, 204),
+  bgExplorer: rgb(38, 38, 38),
+  bgSelectionLabel: rgb(56, 175, 255),
+  bgSelection: rgb(48, 48, 48),
 
   sKeyword: rgb(86, 156, 214),
   sOperatorWord: rgb(86, 156, 214),

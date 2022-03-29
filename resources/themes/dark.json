@@ -1,9 +1,16 @@
 {
-    "scrollbar": "303030",
-    "verticalLine": "404040",
-    "lineNumbers": "202020",
-    "lineNumbersSelect": "0f0f0f",
-    "textarea": "202020",
+    "cActive": "DDDDDD",
+    "cInActive": "AAAAAA",
+
+    "bgScrollBar": "303030",
+    "bgVerticalLine": "404040",
+    "bgLineNumbers": "202020",
+    "bgLineNumbersSelect": "0f0f0f",
+    "bgTextArea": "202020",
+    "bgStatusBar": "007ACC",
+    "bgExplorer": "262626",
+    "bgSelectionLabel": "38AFFF",
+    "bgSelection": "303030",
 
     "sKeyword": "569cd6",
     "sOperatorWord": "569cd6",
