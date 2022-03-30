@@ -171,4 +171,4 @@ proc resource*(file: string): string =
   dataDir/"resources"/file
 
 
-setCurrentDir dataDir
+setCurrentDir dataDir  # note: added for compatibility and may be removed, use resource() instead
