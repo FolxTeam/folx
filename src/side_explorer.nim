@@ -1,7 +1,6 @@
 import std/sequtils, os, std/unicode, math, strutils, std/algorithm
 import pixwindy, pixie
-import render, syntax_highlighting, configuration
-from text_editor import color
+import render, configuration
 
 type 
   File* = object
@@ -47,11 +46,11 @@ proc bySizeDownCmp*(x, y: File): int =
   else: -1
 
 
-let i_folder = readImage("resources/icons/folder.svg")
-let i_openfolder = readImage("resources/icons/openfolder.svg")
-let i_nim = readImage("resources/icons/nim.svg")
-let i_file = readImage("resources/icons/file.svg")
-let i_gitignore = readImage("resources/icons/gitignore.svg")
+let i_folder = readImage rc"icons/folder.svg"
+let i_openfolder = readImage rc"icons/openfolder.svg"
+let i_nim = readImage rc"icons/nim.svg"
+let i_file = readImage rc"icons/file.svg"
+let i_gitignore = readImage rc"icons/gitignore.svg"
 
 proc getIcon(explorer: SideExplorer, file: File): Image =
   if OpenDir(path: file.path / file.name) in explorer.open_dirs:

@@ -43,8 +43,8 @@ proc folx(files: seq[string] = @[], workspace: string = "", args: seq[string]) =
   window.runeInputEnabled = true
 
   var
-    editor_gt    = readFont(config.font).newGlyphTable(config.fontSize)
-    interface_gt = readFont(config.interfaceFont).newGlyphTable(config.interfaceFontSize)
+    editor_gt    = readFont(rc config.font).newGlyphTable(config.fontSize)
+    interface_gt = readFont(rc config.interfaceFont).newGlyphTable(config.interfaceFontSize)
 
     opened_files: seq[string]
     text_editor: TextEditor

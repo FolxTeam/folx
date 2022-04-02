@@ -75,12 +75,12 @@ proc dumpHook*(s: var string, v: ColorRGB) =
 
 
 const defaultConfig = Config(
-  colorTheme: "resources/themes/dark.json",
+  colorTheme: "themes/dark.json",
 
-  font: "resources/FiraCode-Regular.ttf",
+  font: "FiraCode-Regular.ttf",
   fontSize: 11'f32,
 
-  interfaceFont: "resources/Roboto-Regular.ttf",
+  interfaceFont: "Roboto-Regular.ttf",
   interfaceFontSize: 13'f32,
   
   window: WindowConfig(
@@ -147,6 +147,14 @@ createDir configDir
 createDir dataDir
 
 
+proc rc*(file: string): string =
+  ## get resouce path
+  if file.isAbsolute and (file.fileExists or file.dirExists):
+    file
+  else:
+    dataDir/"resources"/file
+
+
 proc readConfig*(file = configDir/"config.json"): Config =
   try:    file.readFile.fromJson(Config)
   except: defaultConfig
@@ -157,7 +165,7 @@ proc readTheme*(file: string): ColorTheme =
 
 
 let config* = readConfig()
-let colorTheme* = readTheme(config.colorTheme)
+let colorTheme* = readTheme(rc config.colorTheme)
 
 
 proc writeConfig*(file = configDir/"config.json") =
@@ -165,10 +173,3 @@ proc writeConfig*(file = configDir/"config.json") =
   writeFile file, config.toJson.parseJson.pretty
 
 writeConfig()
-
-
-proc resource*(file: string): string =
-  dataDir/"resources"/file
-
-
-setCurrentDir dataDir  # note: added for compatibility and may be removed, use resource() instead
