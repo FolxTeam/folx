@@ -174,6 +174,9 @@ proc scroll_bar(
   r.fillStyle = colorTheme.bgScrollBar
   r.fillRect box
 
+#todo: move variables
+var blink* = true;
+var blink_time* = 0;
 
 proc cursor(
   r: Context,
@@ -185,22 +188,36 @@ proc cursor(
   ) =
   if text.len == 0: return
   
+  var width = gt.font.size / 8
+
   let
-    width = gt.font.size / 8
-    
     y = cpos.y.int.bound(0..text.lines.high)
     lineStart = text.lines[y].first
     lineEnd = text.lines[y].last
     x = cpos.x.int.bound(0 .. lineEnd-lineStart + 1)
   
   r.fillStyle = colorTheme.sText
-  r.fillRect rect(
-    box.xy + vec2(
-      text[lineStart ..< lineStart + x].toOpenArray.width(gt).float32 - width / 2,
-      round(gt.font.size * 1.27) * (y.float32 - pos) + gt.font.size * 0.125
-    ),
-    vec2(width, gt.font.size)
-  ).bound(box)
+
+  var cursor_width = if config.block_caret:
+    #set caret width like a symbol
+    width = gt.font.size / 1.8
+    width / 10
+  else:
+    #set narrow caret
+    -(width / 2)
+
+  let rect = rect(
+      box.xy + vec2(
+        text[lineStart ..< lineStart + x].toOpenArray.width(gt).float32 + cursor_width,
+        round(gt.font.size * 1.27) * (y.float32 - pos)
+      ),
+      vec2(width, round(gt.font.size * 1.27))
+    )
+
+  if config.caret_style == "blink":
+    if blink: r.fillRect rect
+  else:
+    r.fillRect rect 
 
 
 
@@ -250,7 +267,6 @@ proc text_editor*(
     size = size,
     total = total + size - 1,
   )
-
 
 proc animate*(editor: var TextEditor, dt: float32, gt: GlyphTable): bool =
   if editor.pos != editor.visual_pos:
@@ -333,6 +349,10 @@ proc onButtonDown*(
   onTextChange: proc(),
   ) =
   if editor.text.len < 0: return
+
+  #if cursor move don't blink (reset timer)
+  blink_time = 0
+  blink = true
 
   case button
   of KeyRight:

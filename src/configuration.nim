@@ -16,6 +16,9 @@ type
     file*: string
     workspace*: string
 
+    caret_style*: string #solid, blink
+    block_caret*: bool
+
   WindowConfig* = object
     size*: IVec2
 
@@ -88,7 +91,9 @@ const defaultConfig = Config(
   ),
 
   file: "",
-  workspace: getHomeDir()
+  workspace: getHomeDir(),
+  caret_style: "solid",
+  block_caret: false,
 )
 static: writeFile "config.default.json", defaultConfig.toJson.parseJson.pretty
 
