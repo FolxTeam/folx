@@ -343,6 +343,12 @@ proc moveToFileEnd(cursor: var IVec2, text: Text, pos: var float32) =
   pos = text.lines.high.float32
 
 
+proc reparse(editor: var TextEditor) =
+  editor.colors = editor.text.parseNimCode(NimParseState(), editor.text.len).segments.colors
+  assert editor.colors.len == editor.text.len
+  editor.indentation = editor.text.indentation
+
+
 proc onButtonDown*(
   editor: var TextEditor,
   button: Button,
@@ -380,7 +386,7 @@ proc onButtonDown*(
     else:
       moveToLineEnd editor.cursor, editor.text
   
-  of KeyBackspace:
+  of KeyBackspace:  # erase character before cursor
     bound editor.cursor, editor.text
 
     if editor.cursor.x == 0:
@@ -390,10 +396,7 @@ proc onButtonDown*(
       editor.cursor.x = editor.text{editor.cursor.y}.len.int32
       editor.text.joinLine editor.cursor.y
 
-      editor.colors = editor.text.parseNimCode(NimParseState(), editor.text.len).segments.colors
-      assert editor.colors.len == editor.text.len
-      editor.indentation = editor.text.indentation
-
+      reparse editor
       onTextChange()
     
     else:
@@ -403,10 +406,24 @@ proc onButtonDown*(
       else:
         bound editor.cursor, editor.text
 
-      editor.colors = editor.text.parseNimCode(NimParseState(), editor.text.len).segments.colors
-      assert editor.colors.len == editor.text.len
-      editor.indentation = editor.text.indentation
+      reparse editor
+      onTextChange()
+  
+  of KeyDelete:  # erase character after cursor
+    bound editor.cursor, editor.text
 
+    if editor.cursor.x == editor.text{editor.cursor.y}.len.int32:
+      # erase \n (join lines)
+      if editor.cursor.y notin 1..editor.text.lines.high: return
+      editor.text.joinLine editor.cursor.y
+
+      reparse editor
+      onTextChange()
+    
+    else:
+      editor.text.erase editor.cursor.x.int, editor.cursor.y.int
+
+      reparse editor
       onTextChange()
   
   else: discard
@@ -417,7 +434,7 @@ proc onRuneInput*(
   rune: Rune,
   onTextChange: proc(),
 ) =
-  if rune.int32 in 0..31: return
+  if rune.int32 in 0..31 or rune.int32 == 127: return
   
   bound editor.cursor, editor.text
   editor.text.insert [rune], editor.cursor.x.int, editor.cursor.y.int
