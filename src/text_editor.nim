@@ -106,8 +106,7 @@ proc text_area(
   text: Text,
   colors: seq[ColorRgb],
   indentation: Indentation,
-  ) =
-
+) =
   let
     size = (box.h / gt.font.size).ceil.int
     space_w = static(" ".toRunes).width(gt)
@@ -136,7 +135,7 @@ proc line_numbers(
   bg: ColorRgb,
   lineCount: int,
   cursor: IVec2,
-  ) =
+) =
   let
     size = (box.h / gt.font.size).ceil.int
     dy = round(gt.font.size * 1.27)
@@ -160,7 +159,7 @@ proc scroll_bar(
   pos: float32,
   size: int,
   total: int
-  ) =
+) =
   if total == 0: return
   let
     a = pos / total.float32
@@ -185,7 +184,7 @@ proc cursor(
   pos: float32,
   cpos: IVec2,
   text: Text,
-  ) =
+) =
   if text.len == 0: return
   
   var width = gt.font.size / 8
@@ -228,7 +227,7 @@ proc text_editor*(
   editor: TextEditor,
   gt: var GlyphTable,
   bg: ColorRgb,
-  ) =
+) =
   let
     size = (box.h / gt.font.size).ceil.int
     total = editor.text.lines.len
@@ -354,10 +353,10 @@ proc onButtonDown*(
   button: Button,
   window: Window,
   onTextChange: proc(),
-  ) =
+) =
   if editor.text.len < 0: return
 
-  #if cursor move don't blink (reset timer)
+  # if cursor move don't blink (reset timer)
   blink_time = 0
   blink = true
 
@@ -440,10 +439,7 @@ proc onRuneInput*(
   editor.text.insert [rune], editor.cursor.x.int, editor.cursor.y.int
   moveRight editor.cursor, editor.text
 
-  editor.colors = editor.text.parseNimCode(NimParseState(), editor.text.len).segments.colors
-  assert editor.colors.len == editor.text.len
-  editor.indentation = editor.text.indentation
-
+  reparse editor
   onTextChange()
 
 
