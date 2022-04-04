@@ -16,8 +16,8 @@ type
     file*: string
     workspace*: string
 
-    caret_style*: string #solid, blink
-    block_caret*: bool
+    caretBlink*: bool
+    caretStyle*: CaretStyle
 
   WindowConfig* = object
     size*: IVec2
@@ -52,6 +52,11 @@ type
     sLineNumber*: ColorRGB
     
     sText*: ColorRGB
+
+  CaretStyle* = enum
+    line
+    rect
+    underline
 
 
 proc parseHook*[T](s: string, i: var int, v: var GVec2[T]) =
@@ -92,8 +97,8 @@ const defaultConfig = Config(
 
   file: "",
   workspace: getHomeDir(),
-  caret_style: "solid",
-  block_caret: false,
+  caretBlink: false,
+  caretStyle: CaretStyle.line,
 )
 static: writeFile "config.default.json", defaultConfig.toJson.parseJson.pretty
 

@@ -261,9 +261,8 @@ proc folx(files: seq[string] = @[], workspace: string = "", args: seq[string]) =
 
   var pt = getMonoTime()  # main clock
   while not window.closeRequested:
-
     # blink timeout
-    if config.caret_style == "blink":
+    if config.caretBlink:
       if blink_time > 35: 
         blink = not blink
         blink_time = 0

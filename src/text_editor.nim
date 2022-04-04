@@ -198,12 +198,13 @@ proc cursor(
   
   r.fillStyle = colorTheme.sText
 
-  var cursor_width = if config.block_caret:
-    #set caret width like a symbol
+  var cursor_width = case config.caretStyle
+  of CaretStyle.rect, CaretStyle.underline:
+    # set caret width like a symbol
     width = gt.font.size / 1.8
     width / 10
-  else:
-    #set narrow caret
+  of CaretStyle.line:
+    # set narrow caret
     -(width / 2)
 
   let rect = rect(
@@ -214,7 +215,7 @@ proc cursor(
       vec2(width, round(gt.font.size * 1.27))
     )
 
-  if config.caret_style == "blink":
+  if config.caretBlink:
     if blink: r.fillRect rect
   else:
     r.fillRect rect 
