@@ -105,6 +105,22 @@ proc render(gt: var GlyphTable, c: Rune; fg, bg: ColorRgb) =
 func clear*(gt: var GlyphTable) =
   clear gt.glyphs
 
+proc `[]`(gt: var GlyphTable, c: Rune; fg, bg: ColorRgb): Image =
+  const space = " ".runeAt(0)
+
+  result =
+    try: gt.glyphs[(c, fg, bg)]
+    except KeyError:
+      gt.render(c, fg, bg)
+      gt.glyphs[(c, fg, bg)]
+  
+  if result == nil:
+    result = 
+      try: gt.glyphs[(space, fg, bg)]
+      except KeyError:
+        gt.render(space, fg, bg)
+        gt.glyphs[(space, fg, bg)]
+
 
 proc draw*(r: Image, text: openarray[Rune], colors: openarray[ColorRgb], pos: Vec2, box: Rect, gt: var GlyphTable, bg: ColorRgb) =
   ## draw colored text
@@ -117,18 +133,7 @@ proc draw*(r: Image, text: openarray[Rune], colors: openarray[ColorRgb], pos: Ve
   for i, c in text:
     let color = colors[i]
     
-    var glyph =
-      try: gt.glyphs[(c, color, bg)]
-      except KeyError:
-        gt.render(c, color, bg)
-        gt.glyphs[(c, color, bg)]
-    
-    if glyph == nil:
-      glyph = 
-        try: gt.glyphs[(" ".runeAt(0), color, bg)]
-        except KeyError:
-          gt.render(" ".runeAt(0), color, bg)
-          gt.glyphs[(" ".runeAt(0), color, bg)]
+    let glyph = gt[c, color, bg]
     
     if glyph == nil:
       continue
@@ -148,6 +153,12 @@ proc draw*(r: Image, text: openarray[Rune], color: ColorRgb, pos: Vec2, box: Rec
 
 proc width*(text: openarray[Rune], gt: var GlyphTable): int32 =
   ## get width of text in pixels for font, specified in gt
+  const black = rgb(0, 0, 0) 
+  
   for c in text:
-    if (c, rgb(0, 0, 0), rgb(0, 0, 0)) notin gt.glyphs: gt.render(c, rgb(0, 0, 0), rgb(0, 0, 0))
-    result += gt.glyphs[(c, rgb(0, 0, 0), rgb(0, 0, 0))].width.int32
+    let glyph = gt[c, black, black]
+    
+    if glyph == nil:
+      continue
+
+    result += glyph.width.int32

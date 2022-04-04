@@ -1,6 +1,6 @@
 import sequtils, os, times, math, unicode, std/monotimes, options
 import pixwindy, pixie, cligen
-import render, syntax_highlighting, configuration, text_editor, side_explorer, git
+import render, syntax_highlighting, configuration, text_editor, side_explorer, git, text
 
 proc contains*(b: Rect, a: GVec2): bool =
   let a = a.vec2
@@ -227,6 +227,15 @@ proc folx(files: seq[string] = @[], workspace: string = "", args: seq[string]) =
       if main_explorer.display:
         pos = main_explorer.pos
         main_explorer.updateDir config.file
+    
+    elif window.buttonDown[KeyLeftControl] and button == KeyV:
+      if not main_explorer.display:
+        text_editor.onPaste(
+          text = newText(getClipboardString()),
+          onTextChange = (proc =
+            display()
+          )
+        )
 
     elif main_explorer.display:
       side_explorer_onButtonDown(

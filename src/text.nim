@@ -27,11 +27,19 @@ proc slice*[T](x: seq[T]; first, last: int): SeqView[T] =
     len: last - first + 1
   )
 
+proc slice*[T](x: seq[T]; first: int, last: BackwardsIndex): SeqView[T] =
+  x.slice(first, x.len - last.int)
+
 template toOpenArray*[T](x: SeqView[T]): openarray[T] = toOpenArray(x.data, 0, x.len - 1)
+
+proc `[]`[T, A, B](x: seq[T], slice: HSlice[A, B]): SeqView[T] = x.slice(slice.a, slice.b)
 
 proc high*(x: SeqView): int = x.len - 1
 
 iterator items*[T](x: SeqView[T]): T =
+  for i in 0..<x.len: yield x.data[i]
+
+iterator mitems*[T](x: SeqView[T]): var T =
   for i in 0..<x.len: yield x.data[i]
 
 
@@ -51,6 +59,14 @@ proc lines(s: seq[Rune]): seq[tuple[first, last: int]] =
     else:
       inc p
   result.add (b, p - 1)
+
+proc `+=`(line: var tuple[first, last: int], v: int) =
+  line.first += v
+  line.last += v
+
+proc `-=`(line: var tuple[first, last: int], v: int) =
+  line.first -= v
+  line.last -= v
 
 
 proc newText*(runes: sink seq[Rune]): Text =
@@ -74,6 +90,8 @@ proc `{}`*(text: Text, line: int): SeqView[Rune] =
   ## get line slice
   text.runes.slice(text.lines[line].first, text.lines[line].last)
 
+proc `{}`*(text: Text, line: BackwardsIndex): SeqView[Rune] = text{text.lines.len - line.int}
+
 
 proc `[]`*[A, B](text: Text, slice: HSlice[A, B]): SeqView[Rune] =
   ## slice by indices
@@ -95,8 +113,34 @@ proc insert*(text: var Text; v: openarray[Rune]; col, line: int) =
 
   text.lines[line].last += v.len
   for i in line+1 .. text.lines.high:
-    text.lines[i].first += v.len
-    text.lines[i].last += v.len
+    text.lines[i] += v.len
+
+
+proc insert*(text: var Text, v: Text; col, line: int) =
+  if v.lines.len == 0:
+    text.insert(v.runes, col, line)
+    return
+  
+  let
+    line = line.bound(0..text.lines.high)
+    col = col.bound(0..text{line}.len)
+  
+  text.runes.insert v.runes, text.lines[line].first + col
+  
+  let selfLen = text.lines[line].first
+  let insertedLen = v.runes.len
+
+  var v = v
+  v.insert text{line}.toOpenArray[0..<col], 0, 0
+  v.insert text{line}.toOpenArray[col..^1], v{^1}.len, v.lines.high
+  for l in v.lines.mitems:
+    l += selfLen
+
+  text.lines[line].last += v{0}.len
+  for l in text.lines[line + 1 .. ^1].mitems:
+    l += insertedLen
+
+  text.lines[line..line] = v.lines
 
 
 proc erase*(text: var Text; col, line: int) =
@@ -110,8 +154,7 @@ proc erase*(text: var Text; col, line: int) =
 
   text.lines[line].last -= 1
   for i in line+1 .. text.lines.high:
-    text.lines[i].first -= 1
-    text.lines[i].last -= 1
+    text.lines[i] -= 1
 
 
 proc joinLine*(text: var Text; line: int) =
@@ -121,5 +164,4 @@ proc joinLine*(text: var Text; line: int) =
   text.lines[line].last += text{line+1}.len
   text.lines.delete line+1
   for i in line+1 .. text.lines.high:
-    text.lines[i].first -= 1
-    text.lines[i].last -= 1
+    text.lines[i] -= 1

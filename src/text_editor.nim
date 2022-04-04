@@ -443,6 +443,25 @@ proc onRuneInput*(
   onTextChange()
 
 
+proc onPaste*(
+  editor: var TextEditor,
+  text: Text,
+  onTextChange: proc(),
+) =
+  if editor.text.len < 0: return
+
+  bound editor.cursor, editor.text
+  editor.text.insert text, editor.cursor.x.int, editor.cursor.y.int
+  if text.lines.len > 1:
+    editor.cursor.y += text.lines.high.int32
+    editor.cursor.x = text{^1}.len.int32
+  else:
+    editor.cursor.x += text.len.int32
+
+  reparse editor
+  onTextChange()
+
+
 proc onScroll*(
   editor: var TextEditor,
   delta: Vec2,
