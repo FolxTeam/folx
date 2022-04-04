@@ -112,3 +112,14 @@ proc erase*(text: var Text; col, line: int) =
   for i in line+1 .. text.lines.high:
     text.lines[i].first -= 1
     text.lines[i].last -= 1
+
+
+proc joinLine*(text: var Text; line: int) =
+  if line notin 0 .. text.lines.high-1: return
+  
+  text.runes.delete text.lines[line].last + 1
+  text.lines[line].last += text{line+1}.len
+  text.lines.delete line+1
+  for i in line+1 .. text.lines.high:
+    text.lines[i].first -= 1
+    text.lines[i].last -= 1

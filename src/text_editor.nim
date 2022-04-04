@@ -384,7 +384,17 @@ proc onButtonDown*(
     bound editor.cursor, editor.text
 
     if editor.cursor.x == 0:
-      ## todo: erase \n
+      # erase \n (join lines)
+      if editor.cursor.y notin 1..editor.text.lines.high: return
+      editor.cursor.y -= 1
+      editor.cursor.x = editor.text{editor.cursor.y}.len.int32
+      editor.text.joinLine editor.cursor.y
+
+      editor.colors = editor.text.parseNimCode(NimParseState(), editor.text.len).segments.colors
+      assert editor.colors.len == editor.text.len
+      editor.indentation = editor.text.indentation
+
+      onTextChange()
     
     else:
       editor.text.erase editor.cursor.x.int - 1, editor.cursor.y.int
