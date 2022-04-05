@@ -270,6 +270,7 @@ proc folx(files: seq[string] = @[], workspace: string = "", args: seq[string]) =
         window = window,
         onWorkspaceOpen = (proc(path: string) =
           main_explorer.current_dir = path
+          main_explorer.item_index = 1
           explorer.display = false
         ),
       )
