@@ -1,6 +1,6 @@
 import std/options, os, std/unicode, math, strutils
 import pixwindy, pixie, std/algorithm, times
-import render, syntax_highlighting, configuration
+import render, configuration
 
 type 
   File* = object
@@ -63,7 +63,7 @@ proc updateDir*(explorer: var Explorer, path: string) =
   explorer.files = @[]
 
   let file_path = absolutePath(path)
-  let (dir, name, ext) = splitFile(file_path)
+  let (dir, _, _) = splitFile(file_path)
     
   if explorer.current_dir == "":
     explorer.current_dir = dir

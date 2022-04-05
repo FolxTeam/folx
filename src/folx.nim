@@ -100,16 +100,15 @@ proc folx(files: seq[string] = @[], workspace: string = "", args: seq[string]) =
     image.clear colorTheme.bgTextArea.color.rgbx
 
     if main_explorer.display:
-
       var box = rect(vec2(0, 0), vec2(200, window.size.vec2.y))
       var dy = round(editor_gt.font.size * 1.27)
       var y = box.y - dy * (pos mod 1)
-      var middle_x = box.x + ( ( box.w - toRunes("Проводник").width(editor_gt).float32 ) / 2 )
+      var middle_x = box.x + ( ( box.w - toRunes("Explorer").width(editor_gt).float32 ) / 2 )
 
       r.fillStyle = colorTheme.bgExplorer
       r.fillRect box
 
-      r.image.draw toRunes("Проводник"), colorTheme.cActive, vec2(middle_x.float32, y), box, editor_gt, configuration.colorTheme.bgExplorer
+      r.image.draw toRunes("Explorer"), colorTheme.cActive, vec2(middle_x.float32, y), box, editor_gt, configuration.colorTheme.bgExplorer
       y += dy
 
       r.image.draw toRunes(main_explorer.dir.path), colorTheme.cInActive, vec2(box.x, y), box, editor_gt, configuration.colorTheme.bgExplorer
