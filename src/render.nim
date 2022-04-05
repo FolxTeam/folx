@@ -87,7 +87,7 @@ proc clear*(image: Image, color: ColorRgbx) =
 proc render(c: Rune, font: Font; fg, bg: ColorRgb): Image =
   ## renter text to image
   let ts = font.typeset($c)
-  let bounds = ts.computeBounds
+  let bounds = font.layoutBounds($c)
   if bounds.x < 1 or bounds.y < 1: return nil
   result = newImage(bounds.x.ceil.int, bounds.y.ceil.int)
   result.fill bg
