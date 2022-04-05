@@ -246,7 +246,7 @@ proc folx(files: seq[string] = @[], workspace: string = "", args: seq[string]) =
         explorer.updateDir config.file
     
     elif window.buttonDown[KeyLeftControl] and button == KeyV:
-      if not main_explorer.display:
+      if not main_explorer.display and opened_files.len != 0:
         text_editor.onPaste(
           text = newText(getClipboardString()),
           onTextChange = (proc =
