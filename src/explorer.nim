@@ -109,15 +109,18 @@ proc onButtonDown*(
 
     let file = explorer.files[explorer.item_index]
 
-    if window.buttonDown[KeyLeftControl]:
-      if file.info.kind == PathComponent.pcDir:
-        config.workspace = explorer.current_dir / file.name
-        onWorkspaceOpen(config.workspace)
-    else:
-      if file.info.kind == PathComponent.pcDir:
+    if file.info.kind == PathComponent.pcDir:
         explorer.item_index = 0
-        explorer.current_dir = explorer.current_dir / file.name
+        explorer.current_dir = explorer.current_dir / file.name & file.ext
         explorer.updateDir explorer.current_dir
+
+  of KeyEnter:
+    let file = explorer.files[explorer.item_index]
+    
+    if file.info.kind == PathComponent.pcDir:
+      config.workspace = explorer.current_dir / file.name & file.ext
+      onWorkspaceOpen(config.workspace)
+      
   
   else: discard
 

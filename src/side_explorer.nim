@@ -53,7 +53,7 @@ let i_file = readImage rc"icons/file.svg"
 let i_gitignore = readImage rc"icons/gitignore.svg"
 
 proc getIcon(explorer: SideExplorer, file: File): Image =
-  if OpenDir(path: file.path / file.name) in explorer.open_dirs:
+  if OpenDir(path: file.path / file.name & file.ext) in explorer.open_dirs:
     result = i_openfolder
   else:
     result = i_folder
@@ -129,7 +129,7 @@ proc onButtonDown*(
     if explorer.current_item == PathComponent.pcFile:
       onFileOpen(explorer.current_item_path / explorer.current_item_name & explorer.current_item_ext)
     elif explorer.current_item == PathComponent.pcDir:
-      explorer.open_dirs.add(OpenDir(path: explorer.current_item_path / explorer.current_item_name))
+      explorer.open_dirs.add(OpenDir(path: explorer.current_item_path / explorer.current_item_name & explorer.current_item_ext))
 
   else: discard
 
@@ -284,9 +284,9 @@ proc side_explorer_area*(
         else:
           drawDir(explorer, image, file, r, box, nesting_indent, text, gt, bg, y, dy, icon_const)
       
-      if OpenDir(path: file.path / file.name) in explorer.open_dirs:
+      if OpenDir(path: file.path / file.name & file.ext) in explorer.open_dirs:
 
-        dir.files[i].files = newFiles(file.path / file.name)
+        dir.files[i].files = newFiles(file.path / file.name & file.ext)
 
         (y, count_items) = r.side_explorer_area(
           image = image,
