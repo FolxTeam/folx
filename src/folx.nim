@@ -6,25 +6,49 @@ proc contains*(b: Rect, a: GVec2): bool =
   let a = a.vec2
   a.x >= b.x and a.x <= b.x + b.w and a.y >= b.y and a.y <= b.y + b.h
 
+proc getFileExt*(file: string): string =
+  if file != "":
+    let (dir, name, ext) = splitFile(file)
+    return ext[1..^1]
+  else:
+    return ""
 
 proc status_bar(
   r: Context,
   box: Rect,
   gt: var GlyphTable,
   bg: ColorRgb,
-  fields: seq[tuple[field: string, value: string]],
+  fieldsStart: seq[tuple[field: string, value: string]],
+  fieldsEnd: seq[tuple[field: string, value: string]],
   ) =
 
   const margin = vec2(8, 2)
+  const marginEnd = vec2(0, 2)
   var s = ""
 
-  for i in fields:
-    s.add(i.field & ": " & i.value & "   ")
+  for i in fieldsStart:
+    s.add(i.field & i.value & "   ")
   
   r.fillStyle = bg
   r.fillRect box
 
-  r.image.draw toRunes(s), sText.color, box.xy + margin, rect(box.xy, box.wh - margin), gt, bg
+  r.image.draw toRunes(s), colorTheme.cInActive, box.xy + margin, rect(box.xy, box.wh - margin), gt, bg
+
+  s = ""
+
+  for i in fieldsEnd:
+    if(i.field == "git: "):
+      s.add(i.value & "   ")
+    else:
+      s.add(i.field & i.value & "   ")
+
+  let start = box.xy + vec2(box.w - toRunes(s).width(gt).float32, 0) + marginEnd
+
+  for i in fieldsEnd:
+    if(i.field == "git: "):
+      r.image.draw(readImage rc"icons/git.svg", translate(start - vec2(10, -2)))
+
+  r.image.draw toRunes(s), colorTheme.cInActive, start, rect(box.xy, box.wh), gt, bg
 
 
 proc folx(files: seq[string] = @[], workspace: string = "", args: seq[string]) =
@@ -139,16 +163,19 @@ proc folx(files: seq[string] = @[], workspace: string = "", args: seq[string]) =
         box = rect(vec2(0, window.size.vec2.y - 20), vec2(window.size.vec2.x, 20)),
         gt = interface_gt,
         bg = colorTheme.bgStatusBar,
-        fields = @[
-          ("count_items", $main_explorer.count_items),
-          ("item", $main_explorer.item_index),
+        fieldsStart = @[
+          ("Items: ", $main_explorer.count_items),
+          ("Item: ", $main_explorer.item_index),
+        ],
+        fieldsEnd = @[
+          ("", ""),
         ] & (
           if main_explorer.current_dir.gitBranch.isSome: @[
-            ("git", main_explorer.current_dir.gitBranch.get),
+            ("git: ", main_explorer.current_dir.gitBranch.get),
           ] else: @[]
         ) & @[
-          ("visual_pos", $main_explorer.pos),  
-        ]
+          ("", if opened_files.len > 0: getFileExt(opened_files[0]) else: getFileExt(""))
+        ],
       )
     elif explorer.display:
       r.explorer_area(
@@ -171,16 +198,19 @@ proc folx(files: seq[string] = @[], workspace: string = "", args: seq[string]) =
         box = rect(vec2(0, window.size.vec2.y - 20), vec2(window.size.vec2.x, 20)),
         gt = interface_gt,
         bg = colorTheme.bgStatusBar,
-        fields = @[
-          ("line", $text_editor.cursor[1]),
-          ("col", $text_editor.cursor[0]),
+        fieldsStart = @[
+          ("Line: ", $text_editor.cursor[1]),
+          ("Col: ", $text_editor.cursor[0]),
+        ],
+        fieldsEnd = @[
+          ("", ""),
         ] & (
           if main_explorer.current_dir.gitBranch.isSome: @[
-            ("git", main_explorer.current_dir.gitBranch.get),
+            ("git: ", main_explorer.current_dir.gitBranch.get),
           ] else: @[]
         ) & @[
-          ("visual_pos", $text_editor.visual_pos),  
-        ]
+          ("", if opened_files.len > 0: getFileExt(opened_files[0]) else: getFileExt(""))
+        ],
       )
 
     window.draw image

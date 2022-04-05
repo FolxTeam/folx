@@ -113,7 +113,7 @@ const defaultColorTheme = ColorTheme(
   bgLineNumbers: rgb(32, 32, 32),
   bgLineNumbersSelect: rgb(15, 15, 15),
   bgTextArea: rgb(32, 32, 32),
-  bgStatusBar: rgb(0, 122, 204),
+  bgStatusBar: rgb(22, 22, 22),
   bgExplorer: rgb(38, 38, 38),
   bgSelectionLabel: rgb(56, 175, 255),
   bgSelection: rgb(48, 48, 48),
