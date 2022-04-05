@@ -285,6 +285,8 @@ proc folx(files: seq[string] = @[], workspace: string = "", args: seq[string]) =
     display()
 
   window.onRune = proc(rune: Rune) =
+    if window.buttonDown[KeyLeftSuper] or window.buttonDown[KeyRightSuper]: return
+
     if not main_explorer.display and opened_files.len != 0:
       text_editor.onRuneInput(
         rune = rune,
