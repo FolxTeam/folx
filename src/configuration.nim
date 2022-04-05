@@ -174,7 +174,7 @@ proc readTheme*(file: string): ColorTheme =
   except: defaultColorTheme
 
 
-let config* = readConfig()
+var config* = readConfig()
 let colorTheme* = readTheme(rc config.colorTheme)
 
 

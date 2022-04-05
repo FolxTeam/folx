@@ -105,9 +105,9 @@ proc updateDir*(explorer: var SideExplorer, path: string) =
     info: info,
   )
 
-proc side_explorer_onButtonDown*(
-  button: Button,
+proc onButtonDown*(
   explorer: var SideExplorer,
+  button: Button,
   path: string,
   onFileOpen: proc(file: string)
   ) =

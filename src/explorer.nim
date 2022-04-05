@@ -15,6 +15,7 @@ type
     item_index*: int
     files*: seq[File]
     display*: bool
+    pos*: float32
 
 proc folderUpCmp*(x, y: File): int =
   if (x.info.kind, y.info.kind) == (PathComponent.pcFile, PathComponent.pcDir): 1
@@ -73,11 +74,12 @@ proc updateDir*(explorer: var Explorer, path: string) =
       explorer.files.add(file_type.get())
 
 
-proc explorer_onButtonDown*(
-  button: Button,
+proc onButtonDown*(
   explorer: var Explorer,
+  button: Button,
   path: string,
-  onFileOpen: proc(file: string)
+  window: Window,
+  onWorkspaceOpen: proc(path: string)
   ) =
   case button
   
@@ -106,12 +108,16 @@ proc explorer_onButtonDown*(
     if explorer.item_index notin 0..explorer.files.high: return
 
     let file = explorer.files[explorer.item_index]
-    if file.info.kind == PathComponent.pcFile:
-      onFileOpen(file.path)
-    elif file.info.kind == PathComponent.pcDir:
-      explorer.item_index = 0
-      explorer.current_dir = explorer.current_dir / file.name
-      explorer.updateDir explorer.current_dir
+
+    if window.buttonDown[KeyLeftControl]:
+      if file.info.kind == PathComponent.pcDir:
+        config.workspace = explorer.current_dir / file.name
+        onWorkspaceOpen(config.workspace)
+    else:
+      if file.info.kind == PathComponent.pcDir:
+        explorer.item_index = 0
+        explorer.current_dir = explorer.current_dir / file.name
+        explorer.updateDir explorer.current_dir
   
   else: discard
 
@@ -119,14 +125,13 @@ proc explorer_area*(
   r: Context,
   image: Image,
   box: Rect,
-  pos: float32,
   gt: var GlyphTable,
   bg: ColorRgb,
   expl: var Explorer,
   ) =
 
   let dy = round(gt.font.size * 1.27)
-  var y = box.y - dy * (pos mod 1)
+  var y = box.y - dy * (expl.pos mod 1)
 
   var max_file_length = 0
   var max_file_size: BiggestInt = 0
@@ -139,7 +144,7 @@ proc explorer_area*(
   # ! sorted on each component rerender | check if seq already sorted or take the sort to updateDir
   sort(expl.files, folderUpCmp)
 
-  r.image.draw expl.current_dir.toRunes, sKeyword.color, vec2(box.x, y), box, gt, bg
+  r.image.draw expl.current_dir.toRunes, colorTheme.sKeyword, vec2(box.x, y), box, gt, bg
   y += dy
 
   for i, file in expl.files.pairs:
@@ -154,7 +159,7 @@ proc explorer_area*(
 
     else:
       if file.info.kind == PathComponent.pcDir:
-        r.image.draw text.toRunes, sStringLitEscape.color, vec2(box.x, y), box, gt, bg
+        r.image.draw text.toRunes, colorTheme.sStringLitEscape, vec2(box.x, y), box, gt, bg
       else:
-        r.image.draw text.toRunes, sText.color, vec2(box.x, y), box, gt, bg
+        r.image.draw text.toRunes, colorTheme.sText, vec2(box.x, y), box, gt, bg
     y += dy

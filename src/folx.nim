@@ -1,6 +1,6 @@
 import sequtils, os, times, math, unicode, std/monotimes, options
 import pixwindy, pixie, cligen
-import render, syntax_highlighting, configuration, text_editor, side_explorer, git, text
+import render, syntax_highlighting, configuration, text_editor, side_explorer, explorer, git, text
 
 proc contains*(b: Rect, a: GVec2): bool =
   let a = a.vec2
@@ -57,6 +57,7 @@ proc folx(files: seq[string] = @[], workspace: string = "", args: seq[string]) =
     pos = 0.0'f32
 
   var main_explorer = SideExplorer(current_dir: workspace, item_index: 1, display: false, pos: 0)
+  var explorer = Explorer(current_dir: "", item_index: 0, files: @[], display: false, pos: 0)
 
   proc open_file(file: string) =
     window.title = file & " - folx"
@@ -150,6 +151,14 @@ proc folx(files: seq[string] = @[], workspace: string = "", args: seq[string]) =
           ("visual_pos", $main_explorer.pos),  
         ]
       )
+    elif explorer.display:
+      r.explorer_area(
+        image = image,
+        box = rect(vec2(0, 0), window.size.vec2 - vec2(10, 20)),
+        gt = editor_gt,
+        bg = colorTheme.bgTextArea,
+        expl = explorer,
+      )
     else:  
       if opened_files.len != 0:
         r.text_editor(
@@ -222,11 +231,19 @@ proc folx(files: seq[string] = @[], workspace: string = "", args: seq[string]) =
 
   window.onButtonPress = proc(button: Button) =
     if window.buttonDown[KeyLeftControl] and button == KeyE:
+      explorer.display = false
       main_explorer.display = not main_explorer.display
       
       if main_explorer.display:
         pos = main_explorer.pos
         main_explorer.updateDir config.file
+
+    elif window.buttonDown[KeyLeftControl] and button == KeyO:
+      main_explorer.display = false
+      explorer.display = not explorer.display
+      
+      if explorer.display:
+        explorer.updateDir config.file
     
     elif window.buttonDown[KeyLeftControl] and button == KeyV:
       if not main_explorer.display:
@@ -238,12 +255,22 @@ proc folx(files: seq[string] = @[], workspace: string = "", args: seq[string]) =
         )
 
     elif main_explorer.display:
-      side_explorer_onButtonDown(
+      main_explorer.onButtonDown(
         button = button,
-        explorer = main_explorer,
         path = config.file,
         onFileOpen = (proc(file: string) =
           open_file file
+        ),
+      )
+    
+    elif explorer.display:
+      explorer.onButtonDown(
+        button = button,
+        path = config.file,
+        window = window,
+        onWorkspaceOpen = (proc(path: string) =
+          main_explorer.current_dir = path
+          explorer.display = false
         ),
       )
 
