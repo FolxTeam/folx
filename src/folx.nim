@@ -10,7 +10,10 @@ proc contains*(b: Rect, a: GVec2): bool =
 proc getFileExt*(file: string): string =
   if file != "":
     let (dir, name, ext) = splitFile(file)
-    return ext[1..^1]
+    if ext.len > 0:
+      return ext[1..^1]
+    else:
+      return "Plain Text"
   else:
     return ""
 
