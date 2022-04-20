@@ -11,6 +11,8 @@
     "bgExplorer": "262626",
     "bgSelectionLabel": "38AFFF",
     "bgSelection": "303030",
+    "bgTitleBar": "202020",
+    "bgTitleBarSelect": "262626",
 
     "sKeyword": "569cd6",
     "sOperatorWord": "569cd6",

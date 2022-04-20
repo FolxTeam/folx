@@ -35,6 +35,8 @@ type
     bgExplorer*: ColorRGB
     bgSelectionLabel*: ColorRGB
     bgSelection*: ColorRGB
+    bgTitleBar*: ColorRGB
+    bgTitleBarSelect*: ColorRGB
 
     sKeyword*: ColorRGB
     sOperatorWord*: ColorRGB
@@ -117,6 +119,8 @@ const defaultColorTheme = ColorTheme(
   bgExplorer: rgb(38, 38, 38),
   bgSelectionLabel: rgb(56, 175, 255),
   bgSelection: rgb(48, 48, 48),
+  bgTitleBar: rgb(32, 32, 32),
+  bgTitleBarSelect: rgb(38, 38, 38),
 
   sKeyword: rgb(86, 156, 214),
   sOperatorWord: rgb(86, 156, 214),

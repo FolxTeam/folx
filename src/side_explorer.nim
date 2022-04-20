@@ -29,6 +29,10 @@ type
     open_dirs*: seq[OpenDir]
     new_dir_item_index*: bool 
 
+proc nameUpCmp*(x, y: File): int =
+  if x.name & x.ext >= y.name & y.ext: 1
+  else: -1
+
 proc folderUpCmp*(x, y: File): int =
   if (x.info.kind, y.info.kind) == (PathComponent.pcFile, PathComponent.pcDir): 1
   else: -1
@@ -260,7 +264,19 @@ proc side_explorer_area*(
     size = (box.h / gt.font.size).ceil.int
   
   # ! sorted on each component rerender | check if seq already sorted or take the sort to updateDir
-  sort(dir.files, folderUpCmp)
+
+  var dir_files: seq[File] = @[]
+  var dir_folders: seq[File] = @[]
+  for file in dir.files:
+    if file.info.kind == PathComponent.pcFile:
+      dir_files.add(file)
+    elif file.info.kind == PathComponent.pcDir:
+      dir_folders.add(file)
+
+
+  sort(dir_files, nameUpCmp)
+  sort(dir_folders, nameUpCmp)
+  dir.files = dir_folders & dir_files
   
   for i, file in dir.files.pairs:
 

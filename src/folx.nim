@@ -1,6 +1,7 @@
 import sequtils, os, times, math, unicode, std/monotimes, options
 import pixwindy, pixie, cligen
-import render, syntax_highlighting, configuration, text_editor, side_explorer, explorer, git, text
+import render, syntax_highlighting, configuration, git, text
+import text_editor, side_explorer, explorer, title
 
 proc contains*(b: Rect, a: GVec2): bool =
   let a = a.vec2
@@ -12,6 +13,7 @@ proc getFileExt*(file: string): string =
     return ext[1..^1]
   else:
     return ""
+
 
 proc status_bar(
   r: Context,
@@ -124,7 +126,7 @@ proc folx(files: seq[string] = @[], workspace: string = "", args: seq[string]) =
     image.clear colorTheme.bgTextArea.color.rgbx
 
     if main_explorer.display:
-      var box = rect(vec2(0, 0), vec2(200, window.size.vec2.y))
+      var box = rect(vec2(0, 40), vec2(260, window.size.vec2.y - 60))
       var dy = round(editor_gt.font.size * 1.27)
       var y = box.y - dy * (pos mod 1)
       var middle_x = box.x + ( ( box.w - toRunes("Explorer").width(editor_gt).float32 ) / 2 )
@@ -153,11 +155,16 @@ proc folx(files: seq[string] = @[], workspace: string = "", args: seq[string]) =
 
       if opened_files.len != 0:
         r.text_editor(
-          box = rect(vec2(box.w, 0), window.size.vec2 - vec2(box.w, 20)),
+          box = rect(vec2(box.w, 40), window.size.vec2 - vec2(box.w, 60)),
           gt = editor_gt,
           bg = colorTheme.bgTextArea,
           editor = text_editor,
         )
+
+      r.title_bar(
+        box = rect(vec2(0, 0), vec2(window.size.vec2.x, 40)),
+        gt = interface_gt,
+      )
 
       r.status_bar(
         box = rect(vec2(0, window.size.vec2.y - 20), vec2(window.size.vec2.x, 20)),
@@ -185,14 +192,20 @@ proc folx(files: seq[string] = @[], workspace: string = "", args: seq[string]) =
         bg = colorTheme.bgTextArea,
         expl = explorer,
       )
-    else:  
+    else:
+
       if opened_files.len != 0:
         r.text_editor(
-          box = rect(vec2(0, 0), window.size.vec2 - vec2(0, 20)),
+          box = rect(vec2(0, 40), window.size.vec2 - vec2(0, 60)),
           gt = editor_gt,
           bg = colorTheme.bgTextArea,
           editor = text_editor,
         )
+
+      r.title_bar(
+        box = rect(vec2(0, 0), vec2(window.size.vec2.x, 40)),
+        gt = interface_gt,
+      )
 
       r.status_bar(
         box = rect(vec2(0, window.size.vec2.y - 20), vec2(window.size.vec2.x, 20)),
@@ -237,7 +250,7 @@ proc folx(files: seq[string] = @[], workspace: string = "", args: seq[string]) =
 
     else:
       if main_explorer.display:
-        if window.mousePos in rect(vec2(0, 0), vec2(200, window.size.vec2.y)):
+        if window.mousePos in rect(vec2(0, 0), vec2(260, window.size.vec2.y)):
           let lines_count = main_explorer.count_items.float32
           pos = (pos - window.scrollDelta.y * 3).max(0).min(lines_count)
         
