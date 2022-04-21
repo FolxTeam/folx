@@ -165,3 +165,7 @@ proc joinLine*(text: var Text; line: int) =
   text.lines.delete line+1
   for i in line+1 .. text.lines.high:
     text.lines[i] -= 1
+
+
+proc `$`*(text: Text): string =
+  $text.runes

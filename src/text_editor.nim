@@ -8,6 +8,7 @@ type
   TextEditor* = object
     pos*, visual_pos*: float32
     text*: Text
+    file*: string
     colors*: seq[ColorRgb]
     indentation*: Indentation
     cursor*: IVec2
@@ -91,6 +92,7 @@ proc indentation*(text: Text): Indentation =
 
 
 proc newTextEditor*(file: string): TextEditor =
+  result.file = file
   result.text = newText(file.readFile)
   result.colors = result.text.parseNimCode(NimParseState(), result.text.len).segments.colors
   assert result.colors.len == result.text.len
@@ -424,6 +426,10 @@ proc onButtonDown*(
 
       reparse editor
       onTextChange()
+  
+  of KeyS:
+    if window.buttonDown[KeyLeftControl]:
+      writeFile editor.file, $editor.text
   
   else: discard
 
