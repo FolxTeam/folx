@@ -1,7 +1,6 @@
 import sequtils, os, times, math, unicode, std/monotimes, options
 import pixwindy, pixie, cligen
-import render, syntax_highlighting, configuration, git, text
-import text_editor, side_explorer, explorer, title
+import render, configuration, git, text, text_editor, side_explorer, explorer, title
 
 proc contains*(b: Rect, a: GVec2): bool =
   let a = a.vec2

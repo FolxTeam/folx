@@ -1,4 +1,3 @@
-import std/sequtils, os, std/unicode, math, strutils, std/algorithm
 import pixwindy, pixie
 import render, configuration
 
