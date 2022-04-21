@@ -2,6 +2,19 @@ import std/options, os, std/unicode, math, strutils
 import pixwindy, pixie, std/algorithm, times
 import render, configuration
 
+when defined(windows):
+  import winim/com
+  import strformat except `&`
+
+  proc getWindowsDisks(): seq[string] =
+    var list: seq[string] = @[]
+    var wmi = GetObject("winmgmts:{impersonationLevel=impersonate}!//.")
+    for drive in wmi.ExecQuery("SELECT * FROM Win32_DiskDrive"):
+      for partition in wmi.ExecQuery(fmt"""ASSOCIATORS OF {{Win32_DiskDrive.DeviceID='{drive.deviceid}'}} WHERE AssocClass = Win32_DiskDriveToDiskPartition"""):
+        for disk in wmi.ExecQuery(fmt"""ASSOCIATORS OF {{Win32_DiskPartition.DeviceID='{partition.deviceid}'}} WHERE AssocClass = Win32_LogicalDiskToPartition"""):
+          list.add(disk.deviceid)
+    return list
+
 type 
   File* = object
     path*: string
@@ -11,6 +24,8 @@ type
     info*: FileInfo
   
   Explorer* = object
+    display_disk_list*: bool
+    disk_list*: seq[string]
     current_dir*: string
     item_index*: int
     files*: seq[File]
@@ -33,15 +48,24 @@ proc bySizeDownCmp*(x, y: File): int =
   if x.info.size > y.info.size: 1
   else: -1
 
+let i_folder = readImage rc"icons/folder.svg"
+let i_openfolder = readImage rc"icons/openfolder.svg"
+let i_nim = readImage rc"icons/nim.svg"
+let i_file = readImage rc"icons/file.svg"
+let i_gitignore = readImage rc"icons/gitignore.svg"
 
-proc digits(x: BiggestInt): int =
-  var x = x
-  if x == 0:
-    return 1
 
-  while x != 0:
-    inc result
-    x = x div 10
+proc getIcon(file: File): Image =
+  if file.info.kind == PathComponent.pcDir:
+    result = i_folder
+  else:
+    case file.ext
+    of ".nim": result = i_nim
+    else: 
+      case file.name
+      of ".gitignore": result = i_gitignore
+      else: result = i_file
+
 
 proc newFile(file_path: string): Option[File] =
   let (dir, name, ext) = splitFile(file_path)
@@ -84,7 +108,13 @@ proc onButtonDown*(
   case button
   
   of KeyLeft:
-    if explorer.current_dir.isRootDir(): return
+    if explorer.current_dir.isRootDir():
+      when defined(linux): return
+      elif defined(windows):
+        explorer.display_disk_list = true
+        explorer.disk_list = getWindowsDisks()
+        return
+      else: return
     
     explorer.item_index = 0
     explorer.current_dir = explorer.current_dir.parentDir
@@ -92,6 +122,14 @@ proc onButtonDown*(
     explorer.updateDir path
     
   of KeyUp:
+    if explorer.display_disk_list:
+      if explorer.item_index > 0:
+        dec explorer.item_index
+      else:
+        if explorer.disk_list.len != 0:
+          explorer.item_index = explorer.disk_list.high
+      return
+
     if explorer.item_index > 0:
       dec explorer.item_index
     else:
@@ -99,6 +137,13 @@ proc onButtonDown*(
         explorer.item_index = explorer.files.high  # cycle
   
   of KeyDown:
+    if explorer.display_disk_list:
+      if explorer.item_index < explorer.disk_list.high:
+        inc explorer.item_index
+      else:
+        explorer.item_index = 0
+      return
+
     if explorer.item_index < explorer.files.high:
       inc explorer.item_index
     else:
@@ -106,6 +151,12 @@ proc onButtonDown*(
 
   of KeyRight:
     if explorer.item_index notin 0..explorer.files.high: return
+
+    if explorer.display_disk_list:
+      explorer.current_dir = explorer.disk_list[explorer.item_index]
+      explorer.display_disk_list = false
+      explorer.updateDir explorer.current_dir
+      return
 
     let file = explorer.files[explorer.item_index]
 
@@ -124,10 +175,96 @@ proc onButtonDown*(
   
   else: discard
 
-proc explorer_area*(
-  r: Context,
+proc disk_item(
+  r: contexts.Context,
   image: Image,
-  box: Rect,
+  gt: var GlyphTable,
+  box: bumpy.Rect,
+  disk: string,
+  dy: float,
+  y: float,
+  ) =
+
+  r.image.draw (disk).toRunes, colorTheme.cActive, vec2(box.x + 10, y), box, gt, colorTheme.bgSelection
+
+proc selectDisk(
+  r: contexts.Context,
+  image: Image,
+  gt: var GlyphTable,
+  box: bumpy.Rect,
+  disk: string,
+  dy: float,
+  y: float,
+  ) =
+
+  r.fillStyle = colorTheme.bgSelection
+  r.fillRect rect(vec2(0,y), vec2(box.w, dy))
+
+  r.fillStyle = colorTheme.bgSelectionLabel
+  r.fillRect rect(vec2(0,y), vec2(2, dy))
+
+  r.image.draw (disk).toRunes, colorTheme.cActive, vec2(box.x + 10, y), box, gt, colorTheme.bgSelection
+
+proc selectItem(
+  r: contexts.Context,
+  image: Image,
+  gt: var GlyphTable,
+  box: bumpy.Rect,
+  file: File,
+  dy: float,
+  y: float,
+  ) =
+
+  r.fillStyle = colorTheme.bgSelection
+  r.fillRect rect(vec2(0,y), vec2(box.w, dy))
+
+  r.fillStyle = colorTheme.bgSelectionLabel
+  r.fillRect rect(vec2(0,y), vec2(2, dy))
+  
+  image.draw(getIcon(file), translate(vec2(box.x + 20, y + 4)) * scale(vec2(0.06 * dy, 0.06 * dy)))
+
+  r.image.draw (file.name & file.ext).toRunes, colorTheme.cActive, vec2(box.x + 40, y), box, gt, colorTheme.bgSelection
+  r.image.draw ($file.info.size).toRunes, colorTheme.cActive, vec2(box.x + 250, y), box, gt, colorTheme.bgSelection
+  r.image.draw ($file.info.lastWriteTime.format("hh:mm dd/MM/yy")).toRunes, colorTheme.cActive, vec2(box.x + 350, y), box, gt, colorTheme.bgSelection
+
+
+proc dirSelected(
+  r: contexts.Context,
+  image: Image,
+  gt: var GlyphTable,
+  box: bumpy.Rect,
+  file: File,
+  dy: float,
+  y: float,
+  ) =
+
+  image.draw(getIcon(file), translate(vec2(box.x + 20, y + 4)) * scale(vec2(0.06 * dy, 0.06 * dy)))
+
+  r.image.draw (file.name & file.ext).toRunes, colorTheme.cActive, vec2(box.x + 40, y), box, gt, colorTheme.bgTextArea
+  r.image.draw ($file.info.size).toRunes, colorTheme.cActive, vec2(box.x + 250, y), box, gt, colorTheme.bgTextArea
+  r.image.draw ($file.info.lastWriteTime.format("hh:mm dd/MM/yy")).toRunes, colorTheme.cActive, vec2(box.x + 350, y), box, gt, colorTheme.bgTextArea
+
+proc fileSelected(
+  r: contexts.Context,
+  image: Image,
+  gt: var GlyphTable,
+  box: bumpy.Rect,
+  file: File,
+  dy: float,
+  y: float,
+  ) =
+
+  image.draw(getIcon(file), translate(vec2(box.x + 20, y + 4)) * scale(vec2(0.06 * dy, 0.06 * dy)))
+
+  r.image.draw (file.name & file.ext).toRunes, colorTheme.cActive, vec2(box.x + 40, y), box, gt, colorTheme.bgTextArea
+  r.image.draw ($file.info.size).toRunes, colorTheme.cActive, vec2(box.x + 250, y), box, gt, colorTheme.bgTextArea
+  r.image.draw ($file.info.lastWriteTime.format("hh:mm dd/MM/yy")).toRunes, colorTheme.cActive, vec2(box.x + 350, y), box, gt, colorTheme.bgTextArea
+
+
+proc explorer_area*(
+  r: contexts.Context,
+  image: Image,
+  box: bumpy.Rect,
   gt: var GlyphTable,
   bg: ColorRgb,
   expl: var Explorer,
@@ -150,19 +287,62 @@ proc explorer_area*(
   r.image.draw expl.current_dir.toRunes, colorTheme.sKeyword, vec2(box.x, y), box, gt, bg
   y += dy
 
-  for i, file in expl.files.pairs:
-    let spaces_after_name = " ".repeat(max_file_length + 1 - (file.name & file.ext).runeLen())
-    let spaces_after_size = " ".repeat(max_file_size.digits() + 1 - digits(file.info.size))
+  if not expl.display_disk_list:
+    for i, file in expl.files.pairs:
+      
+      if i == int(expl.item_index):
+        
+        r.selectItem(
+          gt = gt,
+          image = image,
+          file = file,
+          box = box,
+          dy = dy,
+          y = y,
+        )
 
-    let text = file.name & file.ext & spaces_after_name & $file.info.size & spaces_after_size & $file.info.lastWriteTime.format("hh:mm dd/MM/yy")
-    if i == int(expl.item_index):
-      r.fillStyle = colorTheme.bgSelection
-      r.fillRect rect(vec2(0,y), vec2(text.toRunes.width(gt).float32, dy))
-      r.image.draw toRunes(text), rgb(0, 0, 0), vec2(box.x, y), box, gt, colorTheme.cInActive
-
-    else:
-      if file.info.kind == PathComponent.pcDir:
-        r.image.draw text.toRunes, colorTheme.sStringLitEscape, vec2(box.x, y), box, gt, bg
       else:
-        r.image.draw text.toRunes, colorTheme.sText, vec2(box.x, y), box, gt, bg
-    y += dy
+        if file.info.kind == PathComponent.pcDir:
+          r.dirSelected(
+            gt = gt,
+            image = image,
+            file = file,
+            box = box,
+            dy = dy,
+            y = y,
+          )
+        else:
+          r.fileSelected(
+            gt = gt,
+            image = image,
+            file = file,
+            box = box,
+            dy = dy,
+            y = y,
+          )
+          
+      y += dy
+  else:
+    for i, disk in expl.disk_list:
+      if i == int(expl.item_index):
+        r.selectDisk(
+          gt = gt,
+          image = image,
+          disk = disk,
+          box = box,
+          dy = dy,
+          y = y,
+        )
+      else:
+        r.disk_item(
+          gt = gt,
+          image = image,
+          disk = disk,
+          box = box,
+          dy = dy,
+          y = y,
+        )
+
+      y += dy
+
+

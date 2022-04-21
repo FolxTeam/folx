@@ -85,7 +85,7 @@ proc folx(files: seq[string] = @[], workspace: string = "", args: seq[string]) =
     pos = 0.0'f32
 
   var main_explorer = SideExplorer(current_dir: workspace, item_index: 1, display: false, pos: 0)
-  var explorer = Explorer(current_dir: "", item_index: 0, files: @[], display: false, pos: 0)
+  var explorer = Explorer(display_disk_list: false, current_dir: "", item_index: 0, files: @[], display: false, pos: 0)
 
   proc open_file(file: string) =
     window.title = file & " - folx"

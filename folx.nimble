@@ -10,6 +10,7 @@ bin           = @["folx"]
 requires "nim >= 1.4.8"
 requires "https://github.com/FolxTeam/pixwindy", "pixie", "cligen"
 requires "jsony"
+requires "winim"
 
 
 let dataDir =
