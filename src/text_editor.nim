@@ -355,6 +355,7 @@ proc onButtonDown*(
   button: Button,
   window: Window,
   onTextChange: proc(),
+  onTextSave: proc(),
 ) =
   if editor.text.len < 0: return
 
@@ -439,6 +440,7 @@ proc onButtonDown*(
   of KeyS:
     if window.buttonDown[KeyLeftControl]:
       writeFile editor.file, $editor.text
+      onTextSave()
   
   else: discard
 

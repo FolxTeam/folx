@@ -326,7 +326,12 @@ proc folx(files: seq[string] = @[], workspace: string = "", args: seq[string]) =
       text_editor.onButtonDown(
         button = button,
         window = window,
-        onTextChange = (proc = discard),
+        onTextChange = (proc = 
+          window.title = text_editor.file & "* - folx"
+        ),
+        onTextSave = (proc() =
+          window.title = text_editor.file & " - folx"
+        ),
       )
     
     display()
@@ -339,6 +344,7 @@ proc folx(files: seq[string] = @[], workspace: string = "", args: seq[string]) =
         rune = rune,
         onTextChange = (proc =
           display()
+          window.title = text_editor.file & "* - folx"
         )
       )
 
