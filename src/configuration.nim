@@ -164,7 +164,11 @@ createDir dataDir
 proc rc*(file: string): string =
   ## get resouce path
   if file.isAbsolute and (file.fileExists or file.dirExists):
-    file
+    return file
+
+  let rfile = "resources"/file
+  if rfile.isAbsolute and (rfile.fileExists or rfile.dirExists):
+    rfile
   else:
     dataDir/"resources"/file
 
