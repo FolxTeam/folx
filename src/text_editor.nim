@@ -427,6 +427,15 @@ proc onButtonDown*(
       reparse editor
       onTextChange()
   
+  of KeyEnter:  # insert new line
+    bound editor.cursor, editor.text
+    editor.text.`\n` editor.cursor.x.int, editor.cursor.y.int
+    inc editor.cursor.y
+    editor.cursor.x = 0
+    
+    reparse editor
+    onTextChange()
+  
   of KeyS:
     if window.buttonDown[KeyLeftControl]:
       writeFile editor.file, $editor.text

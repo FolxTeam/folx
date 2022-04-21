@@ -167,5 +167,21 @@ proc joinLine*(text: var Text; line: int) =
     text.lines[i] -= 1
 
 
+proc `\n`*(text: var Text; col, line: int; breakString = "\n") =
+  ## insert new line
+  if text.lines.len == 0: return
+
+  let
+    line = line.bound(0..text.lines.high)
+    col = col.bound(0..text{line}.len)
+  
+  let breakString = breakString.toRunes
+  text.insert breakString, col, line
+  text.lines[line..line] = [
+    (text.lines[line].first, text.lines[line].first + col - 1),
+    (text.lines[line].first + col + breakString.len, text.lines[line].last),
+  ]
+
+
 proc `$`*(text: Text): string =
   $text.runes
