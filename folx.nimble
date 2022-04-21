@@ -1,8 +1,8 @@
 import os
 
-version       = "0.0.0"
+version       = "0.1"
 author        = "FolxTeam"
-description   = "Lightweight IDE"
+description   = "Lightweight IDE / text editor"
 license       = "MIT"
 srcDir        = "src"
 bin           = @["folx"]
