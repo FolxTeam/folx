@@ -18,5 +18,5 @@ Download binaries on [GitHub releases](https://github.com/FolxTeam/folx/releases
 nimble install https://github.com/FolxTeam/folx
 ```
 <details><summary>Compile flags (write it after <code>nimble</code> but before <code>install</code>)</summary><p>
-  <code>-u:useMalloc</code> - don't use malloc
+  <code>-u:useMalloc</code> - use nim <code>alloc</code> instead of c <code>malloc</code>
 </p></details>
