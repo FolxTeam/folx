@@ -48,23 +48,16 @@ proc bySizeDownCmp*(x, y: File): int =
   if x.info.size > y.info.size: 1
   else: -1
 
-let i_folder = readImage rc"icons/folder.svg"
-let i_openfolder = readImage rc"icons/openfolder.svg"
-let i_nim = readImage rc"icons/nim.svg"
-let i_file = readImage rc"icons/file.svg"
-let i_gitignore = readImage rc"icons/gitignore.svg"
-
-
 proc getIcon(file: File): Image =
   if file.info.kind == PathComponent.pcDir:
-    result = i_folder
+    result = iconTheme.folder
   else:
     case file.ext
-    of ".nim": result = i_nim
+    of ".nim": result = iconTheme.nim
     else: 
       case file.name
-      of ".gitignore": result = i_gitignore
-      else: result = i_file
+      of ".gitignore": result = iconTheme.gitignore
+      else: result = iconTheme.file
 
 
 proc newFile(file_path: string): Option[File] =

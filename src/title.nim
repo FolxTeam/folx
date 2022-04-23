@@ -11,7 +11,7 @@ proc title_bar_button_minimaze(
   r.fillStyle = bg
   r.fillRect box
 
-  r.image.draw(readImage rc"icons/minimaze.svg", translate(vec2(box.x + 16, 19)))
+  r.image.draw(iconTheme.minimaze, translate(vec2(box.x + 16, 19)))
 
 proc title_bar_button_maximaze(
     r: Context,
@@ -23,7 +23,7 @@ proc title_bar_button_maximaze(
   r.fillStyle = bg
   r.fillRect box
 
-  r.image.draw(readImage rc"icons/maximaze.svg", translate(vec2(box.x + 16, 16)))
+  r.image.draw(iconTheme.maximaze, translate(vec2(box.x + 16, 16)))
 
 proc title_bar_button_close(
     r: Context,
@@ -35,7 +35,7 @@ proc title_bar_button_close(
   r.fillStyle = bg
   r.fillRect box
 
-  r.image.draw(readImage rc"icons/close.svg", translate(vec2(box.x + 16, 16)))
+  r.image.draw(iconTheme.close, translate(vec2(box.x + 16, 16)))
 
 proc title_bar_button_extention(
     r: Context,
@@ -47,7 +47,7 @@ proc title_bar_button_extention(
   r.fillStyle = bg
   r.fillRect box
 
-  r.image.draw(readImage rc"icons/extention.svg", translate(vec2(220, 12)))
+  r.image.draw(iconTheme.extention, translate(vec2(220, 12)))
 
 proc title_bar_button_git(
     r: Context,
@@ -59,7 +59,7 @@ proc title_bar_button_git(
   r.fillStyle = bg
   r.fillRect box
 
-  r.image.draw(readImage rc"icons/gitbranch.svg", translate(vec2(155, 12)))
+  r.image.draw(iconTheme.gitbranch, translate(vec2(155, 12)))
 
 proc title_bar_button_search(
     r: Context,
@@ -71,7 +71,7 @@ proc title_bar_button_search(
   r.fillStyle = bg
   r.fillRect box
 
-  r.image.draw(readImage rc"icons/search.svg", translate(vec2(90, 12)))
+  r.image.draw(iconTheme.search, translate(vec2(90, 12)))
 
 proc title_bar_button_explorer(
     r: Context,
@@ -83,7 +83,7 @@ proc title_bar_button_explorer(
   r.fillStyle = bg
   r.fillRect box
 
-  r.image.draw(readImage rc"icons/explorer.svg", translate(vec2(25, 13)))
+  r.image.draw(iconTheme.explorer, translate(vec2(25, 13)))
 
 proc title_bar*(
   r: Context,

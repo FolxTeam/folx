@@ -50,12 +50,12 @@ proc status_bar(
 
   for i in fieldsEnd:
     if(i.field == "git: "):
-      r.image.draw(readImage rc"icons/git.svg", translate(start - vec2(10, -2)))
+      r.image.draw(iconTheme.git, translate(start - vec2(10, -2)))
 
   r.image.draw toRunes(s), colorTheme.cInActive, start, rect(box.xy, box.wh), gt, bg
 
 
-proc folx(files: seq[string] = @[], workspace: string = "", args: seq[string]) =
+proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderResources: bool = false, args: seq[string]) =
   let files =
     if files.len != 0 or (args.len != 0 and not args.any(dirExists)): files & args
     elif files.len != 0: files
@@ -66,6 +66,8 @@ proc folx(files: seq[string] = @[], workspace: string = "", args: seq[string]) =
     elif args.len != 0 and args[0].dirExists: args[0]
     elif files.len == 0 or files == @[config.file]: config.workspace
     else: files[0].splitPath.head
+
+  if preferWorkFolderResources: configuration.workFolderResources()
   
   let window = newWindow("folx", config.window.size, visible=false)
   window.runeInputEnabled = true
@@ -78,7 +80,7 @@ proc folx(files: seq[string] = @[], workspace: string = "", args: seq[string]) =
     text_editor: TextEditor
 
     displayRequest = false
-    image = newImage(1280, 720)
+    image = newImage(window.size.x, window.size.y)
     r = image.newContext
 
     # for explorer

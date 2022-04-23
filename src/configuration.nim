@@ -54,6 +54,21 @@ type
     sLineNumber*: ColorRGB
     
     sText*: ColorRGB
+  
+  IconTheme* = object
+    close*: Image
+    explorer*: Image
+    extention*: Image
+    file*: Image
+    folder*: Image
+    git*: Image
+    gitbranch*: Image
+    gitignore*: Image
+    maximaze*: Image
+    minimaze*: Image
+    nim*: Image
+    openfolder*: Image
+    search*: Image
 
   CaretStyle* = enum
     line
@@ -147,12 +162,12 @@ proc newHook*(x: var ColorTheme) =
   x = defaultColorTheme
 
 
-let configDir* =
+var configDir* =
   when defined(linux): getHomeDir()/".config"/"folx"
   elif defined(windows): getHomeDir()/"AppData"/"Roaming"/"folx"
   else: "."
 
-let dataDir* =
+var dataDir* =
   when defined(linux): getHomeDir()/".local"/"share"/"folx"
   elif defined(windows): getHomeDir()/"AppData"/"Roaming"/"folx"
   else: "."
@@ -165,13 +180,8 @@ proc rc*(file: string): string =
   ## get resouce path
   if file.isAbsolute and (file.fileExists or file.dirExists):
     return file
-
-  let rfile = "resources"/file
-  if rfile.isAbsolute and (rfile.fileExists or rfile.dirExists):
-    rfile
   else:
-    dataDir/"resources"/file
-
+    return dataDir/"resources"/file
 
 proc readConfig*(file = configDir/"config.json"): Config =
   try:    file.readFile.fromJson(Config)
@@ -181,9 +191,26 @@ proc readTheme*(file: string): ColorTheme =
   try:    file.readFile.fromJson(ColorTheme)
   except: defaultColorTheme
 
+proc readIcons*() : IconTheme =
+  return IconTheme(
+    close: readImage rc"icons/close.svg",
+    explorer: readImage rc"icons/explorer.svg",
+    extention: readImage rc"icons/extention.svg",
+    file: readImage rc"icons/file.svg",
+    folder: readImage rc"icons/folder.svg",
+    git: readImage rc"icons/git.svg",
+    gitbranch: readImage rc"icons/gitbranch.svg",
+    gitignore: readImage rc"icons/gitignore.svg",
+    maximaze: readImage rc"icons/maximaze.svg",
+    minimaze: readImage rc"icons/minimaze.svg",
+    nim: readImage rc"icons/nim.svg",
+    openfolder: readImage rc"icons/openfolder.svg",
+    search: readImage rc"icons/search.svg",
+  )
 
 var config* = readConfig()
-let colorTheme* = readTheme(rc config.colorTheme)
+var colorTheme* = readTheme(rc config.colorTheme)
+var iconTheme* = readIcons()
 
 
 proc writeConfig*(file = configDir/"config.json") =
@@ -191,3 +218,10 @@ proc writeConfig*(file = configDir/"config.json") =
   writeFile file, config.toJson.parseJson.pretty
 
 writeConfig()
+
+proc workFolderResources*() =
+  configDir = getCurrentDir()
+  dataDir = getCurrentDir()
+  config = readConfig()
+  colorTheme = readTheme(rc config.colorTheme)
+  iconTheme = readIcons()

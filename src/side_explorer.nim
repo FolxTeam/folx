@@ -50,25 +50,19 @@ proc bySizeDownCmp*(x, y: File): int =
   else: -1
 
 
-let i_folder = readImage rc"icons/folder.svg"
-let i_openfolder = readImage rc"icons/openfolder.svg"
-let i_nim = readImage rc"icons/nim.svg"
-let i_file = readImage rc"icons/file.svg"
-let i_gitignore = readImage rc"icons/gitignore.svg"
-
 proc getIcon(explorer: SideExplorer, file: File): Image =
   if OpenDir(path: file.path / file.name & file.ext) in explorer.open_dirs:
-    result = i_openfolder
+    result = iconTheme.openfolder
   else:
-    result = i_folder
+    result = iconTheme.folder
 
 proc getIcon(file: File): Image =
   case file.ext
-  of ".nim": result = i_nim
+  of ".nim": result = iconTheme.nim
   else: 
     case file.name
-    of ".gitignore": result = i_gitignore
-    else: result = i_file
+    of ".gitignore": result = iconTheme.gitignore
+    else: result = iconTheme.file
 
 
 proc newFiles(file_path: string): seq[File] =
