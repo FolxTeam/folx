@@ -1,6 +1,6 @@
 import std/options, os, std/unicode, math, strutils
 import pixwindy, pixie, std/algorithm, times
-import render, configuration
+import render, configuration, markup
 
 when defined(windows):
   import winim/com
@@ -168,90 +168,90 @@ proc onButtonDown*(
   
   else: discard
 
-proc disk_item(
+proc disk(
   r: contexts.Context,
   image: Image,
   gt: var GlyphTable,
-  box: bumpy.Rect,
   disk: string,
-  dy: float,
-  y: float,
   ) =
 
-  r.image.draw (disk).toRunes, colorTheme.cActive, vec2(box.x + 10, y), box, gt, colorTheme.bgSelection
+  let box = parentBox
+  let dy = round(gt.font.size * 1.27)
 
-proc selectDisk(
+  r.image.draw (disk).toRunes, colorTheme.cActive, vec2(box.x + 10, box.y), box, gt, colorTheme.bgSelection
+
+proc selectedDisk(
   r: contexts.Context,
   image: Image,
   gt: var GlyphTable,
-  box: bumpy.Rect,
   disk: string,
-  dy: float,
-  y: float,
   ) =
+
+  let box = parentBox
+  let dy = round(gt.font.size * 1.27)
 
   r.fillStyle = colorTheme.bgSelection
-  r.fillRect rect(vec2(0,y), vec2(box.w, dy))
+  r.fillRect rect(vec2(0, box.y), vec2(box.w, dy))
 
   r.fillStyle = colorTheme.bgSelectionLabel
-  r.fillRect rect(vec2(0,y), vec2(2, dy))
+  r.fillRect rect(vec2(0, box.y), vec2(2, dy))
 
-  r.image.draw (disk).toRunes, colorTheme.cActive, vec2(box.x + 10, y), box, gt, colorTheme.bgSelection
+  r.image.draw (disk).toRunes, colorTheme.cActive, vec2(box.x + 10, box.y), box, gt, colorTheme.bgSelection
 
-proc selectItem(
+proc selectedItem(
   r: contexts.Context,
   image: Image,
   gt: var GlyphTable,
-  box: bumpy.Rect,
   file: File,
-  dy: float,
-  y: float,
   ) =
 
+  let box = parentBox
+  let dy = round(gt.font.size * 1.27)
+
   r.fillStyle = colorTheme.bgSelection
-  r.fillRect rect(vec2(0,y), vec2(box.w, dy))
+  r.fillRect rect(vec2(0,box.y), vec2(box.w, dy))
 
   r.fillStyle = colorTheme.bgSelectionLabel
-  r.fillRect rect(vec2(0,y), vec2(2, dy))
+  r.fillRect rect(vec2(0,box.y), vec2(2, dy))
   
-  image.draw(getIcon(file), translate(vec2(box.x + 20, y + 4)) * scale(vec2(0.06 * dy, 0.06 * dy)))
+  image.draw(getIcon(file), translate(vec2(box.x + 20, box.y + 4)) * scale(vec2(0.06 * dy, 0.06 * dy)))
 
-  r.image.draw (file.name & file.ext).toRunes, colorTheme.cActive, vec2(box.x + 40, y), box, gt, colorTheme.bgSelection
-  r.image.draw ($file.info.size).toRunes, colorTheme.cActive, vec2(box.x + 250, y), box, gt, colorTheme.bgSelection
-  r.image.draw ($file.info.lastWriteTime.format("hh:mm dd/MM/yy")).toRunes, colorTheme.cActive, vec2(box.x + 350, y), box, gt, colorTheme.bgSelection
+  r.image.draw (file.name & file.ext).toRunes, colorTheme.cActive, vec2(box.x + 40, box.y), box, gt, colorTheme.bgSelection
+  r.image.draw ($file.info.size).toRunes, colorTheme.cActive, vec2(box.x + 250, box.y), box, gt, colorTheme.bgSelection
+  r.image.draw ($file.info.lastWriteTime.format("hh:mm dd/MM/yy")).toRunes, colorTheme.cActive, vec2(box.x + 350, box.y), box, gt, colorTheme.bgSelection
 
 
-proc dirSelected(
+proc dir(
   r: contexts.Context,
   image: Image,
   gt: var GlyphTable,
-  box: bumpy.Rect,
   file: File,
-  dy: float,
-  y: float,
   ) =
 
-  image.draw(getIcon(file), translate(vec2(box.x + 20, y + 4)) * scale(vec2(0.06 * dy, 0.06 * dy)))
+  let box = parentBox
+  let dy = round(gt.font.size * 1.27)
 
-  r.image.draw (file.name & file.ext).toRunes, colorTheme.cActive, vec2(box.x + 40, y), box, gt, colorTheme.bgTextArea
-  r.image.draw ($file.info.size).toRunes, colorTheme.cActive, vec2(box.x + 250, y), box, gt, colorTheme.bgTextArea
-  r.image.draw ($file.info.lastWriteTime.format("hh:mm dd/MM/yy")).toRunes, colorTheme.cActive, vec2(box.x + 350, y), box, gt, colorTheme.bgTextArea
+  image.draw(getIcon(file), translate(vec2(box.x + 20, box.y + 4)) * scale(vec2(0.06 * dy, 0.06 * dy)))
 
-proc fileSelected(
+  r.image.draw (file.name & file.ext).toRunes, colorTheme.cActive, vec2(box.x + 40, box.y), box, gt, colorTheme.bgTextArea
+  r.image.draw ($file.info.size).toRunes, colorTheme.cActive, vec2(box.x + 250, box.y), box, gt, colorTheme.bgTextArea
+  r.image.draw ($file.info.lastWriteTime.format("hh:mm dd/MM/yy")).toRunes, colorTheme.cActive, vec2(box.x + 350, box.y), box, gt, colorTheme.bgTextArea
+
+proc file(
   r: contexts.Context,
   image: Image,
   gt: var GlyphTable,
-  box: bumpy.Rect,
   file: File,
-  dy: float,
-  y: float,
   ) =
 
-  image.draw(getIcon(file), translate(vec2(box.x + 20, y + 4)) * scale(vec2(0.06 * dy, 0.06 * dy)))
+  let box = parentBox
+  let dy = round(gt.font.size * 1.27)
 
-  r.image.draw (file.name & file.ext).toRunes, colorTheme.cActive, vec2(box.x + 40, y), box, gt, colorTheme.bgTextArea
-  r.image.draw ($file.info.size).toRunes, colorTheme.cActive, vec2(box.x + 250, y), box, gt, colorTheme.bgTextArea
-  r.image.draw ($file.info.lastWriteTime.format("hh:mm dd/MM/yy")).toRunes, colorTheme.cActive, vec2(box.x + 350, y), box, gt, colorTheme.bgTextArea
+  image.draw(getIcon(file), translate(vec2(box.x + 20, box.y + 4)) * scale(vec2(0.06 * dy, 0.06 * dy)))
+
+  r.image.draw (file.name & file.ext).toRunes, colorTheme.cActive, vec2(box.x + 40, box.y), box, gt, colorTheme.bgTextArea
+  r.image.draw ($file.info.size).toRunes, colorTheme.cActive, vec2(box.x + 250, box.y), box, gt, colorTheme.bgTextArea
+  r.image.draw ($file.info.lastWriteTime.format("hh:mm dd/MM/yy")).toRunes, colorTheme.cActive, vec2(box.x + 350, box.y), box, gt, colorTheme.bgTextArea
 
 
 proc explorer_area*(
@@ -282,59 +282,46 @@ proc explorer_area*(
 
   if not expl.display_disk_list:
     for i, file in expl.files.pairs:
-      
       if i == int(expl.item_index):
-        
-        r.selectItem(
-          gt = gt,
-          image = image,
-          file = file,
-          box = box,
-          dy = dy,
-          y = y,
-        )
-
+        frame(x = parentBox.x, y = y, w = parentBox.w):
+          r.selectedItem(
+            gt = gt,
+            image = image,
+            file = file,
+          )
       else:
         if file.info.kind == PathComponent.pcDir:
-          r.dirSelected(
-            gt = gt,
-            image = image,
-            file = file,
-            box = box,
-            dy = dy,
-            y = y,
-          )
+          frame(x = parentBox.x, y = y, w = parentBox.w):
+            r.dir(
+              gt = gt,
+              image = image,
+              file = file,
+            )
         else:
-          r.fileSelected(
-            gt = gt,
-            image = image,
-            file = file,
-            box = box,
-            dy = dy,
-            y = y,
-          )
-          
+          frame(x = parentBox.x, y = y, w = parentBox.w):
+            r.file(
+              gt = gt,
+              image = image,
+              file = file,
+            )
+            
       y += dy
   else:
     for i, disk in expl.disk_list:
       if i == int(expl.item_index):
-        r.selectDisk(
-          gt = gt,
-          image = image,
-          disk = disk,
-          box = box,
-          dy = dy,
-          y = y,
-        )
+        frame(x = parentBox.x, y = y, w = parentBox.w):
+          r.selectedDisk(
+            gt = gt,
+            image = image,
+            disk = disk,
+          )
       else:
-        r.disk_item(
-          gt = gt,
-          image = image,
-          disk = disk,
-          box = box,
-          dy = dy,
-          y = y,
-        )
+        frame(x = parentBox.x, y = y, w = parentBox.w):
+          r.disk(
+            gt = gt,
+            image = image,
+            disk = disk,
+          )
 
       y += dy
 
