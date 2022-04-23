@@ -8,9 +8,8 @@ srcDir        = "src"
 bin           = @["folx"]
 
 requires "nim >= 1.4.8"
-requires "https://github.com/FolxTeam/pixwindy", "pixie", "cligen"
-requires "jsony"
-requires "winim"
+requires "https://github.com/FolxTeam/pixwindy"
+requires "jsony", "pixie", "cligen", "fusion", "winim"
 
 
 let dataDir =

@@ -1,6 +1,5 @@
 import sequtils, unicode, math
-import pixie, pixwindy
-import render, syntax_highlighting, configuration, text
+import markup, syntax_highlighting, configuration, text
 
 type
   Indentation* = seq[tuple[len: seq[int], has_graph: bool]]
@@ -101,7 +100,6 @@ proc newTextEditor*(file: string): TextEditor =
 
 proc text_area(
   r: Context,
-  box: Rect,
   gt: var GlyphTable,
   pos: float32,
   bg: ColorRgb,
@@ -110,6 +108,7 @@ proc text_area(
   indentation: Indentation,
 ) =
   let
+    box = parentBox
     size = (box.h / gt.font.size).ceil.int
     space_w = static(" ".toRunes).width(gt)
 
@@ -131,7 +130,6 @@ proc text_area(
 
 proc line_numbers(
   r: Context,
-  box: Rect,
   gt: var GlyphTable,
   pos: float32,
   bg: ColorRgb,
@@ -139,6 +137,7 @@ proc line_numbers(
   cursor: IVec2,
 ) =
   let
+    box = parentBox
     size = (box.h / gt.font.size).ceil.int
     dy = round(gt.font.size * 1.27)
     right = (box.w + toRunes($lineCount).width(gt).float32) / 2
@@ -157,7 +156,6 @@ proc line_numbers(
 
 proc scroll_bar(
   r: Context,
-  box: Rect,
   pos: float32,
   size: int,
   total: int
@@ -168,8 +166,8 @@ proc scroll_bar(
     b = (pos + size.float32) / total.float32
 
   let box = rect(
-    vec2(box.x, box.y + (box.h * a)),
-    vec2(box.w, box.h * (b - a))
+    vec2(parentBox.x, parentBox.y + (parentBox.h * a)),
+    vec2(parentBox.w, parentBox.h * (b - a))
   )
 
   r.fillStyle = colorTheme.bgScrollBar
@@ -181,7 +179,6 @@ var blink_time* = 0;
 
 proc cursor(
   r: Context,
-  box: Rect,
   gt: var GlyphTable,
   pos: float32,
   cpos: IVec2,
@@ -192,6 +189,7 @@ proc cursor(
   var width = gt.font.size / 8
 
   let
+    box = parentBox
     y = cpos.y.int.bound(0..text.lines.high)
     lineStart = text.lines[y].first
     lineEnd = text.lines[y].last
@@ -219,56 +217,54 @@ proc cursor(
   if config.caretBlink:
     if blink: r.fillRect rect
   else:
-    r.fillRect rect 
+    r.fillRect rect
 
 
 
 proc text_editor*(
   r: Context,
-  box: Rect,
   editor: TextEditor,
   gt: var GlyphTable,
   bg: ColorRgb,
 ) =
   let
-    size = (box.h / gt.font.size).ceil.int
+    size = (parentBox.h / gt.font.size).ceil.int
     total = editor.text.lines.len
 
     line_number_width = float32 ($total).toRunes.width(gt)
   
-  r.line_numbers(
-    box = rect(box.xy + vec2(0, 0), vec2(line_number_width + 20, box.h)),
-    gt = gt,
-    pos = editor.visual_pos,
-    bg = colorTheme.bgLineNumbers,
-    lineCount = total,
-    cursor = editor.cursor,
-  )
+  frame(w = line_number_width + 20):
+    r.line_numbers(
+      gt = gt,
+      pos = editor.visual_pos,
+      bg = colorTheme.bgLineNumbers,
+      lineCount = total,
+      cursor = editor.cursor,
+    )
 
-  r.text_area(
-    box = rect(box.xy + vec2(line_number_width + 20, 0), box.wh - vec2(10, 0) - vec2(line_number_width + 20, 0)),
-    gt = gt,
-    pos = editor.visual_pos,
-    bg = colorTheme.bgTextArea,
-    text = editor.text,
-    colors = editor.colors,
-    indentation = editor.indentation,
-  )
+  frame(x = line_number_width + 20, w = parentBox.w - line_number_width - 20 - 10):
+    r.text_area(
+      gt = gt,
+      pos = editor.visual_pos,
+      bg = colorTheme.bgTextArea,
+      text = editor.text,
+      colors = editor.colors,
+      indentation = editor.indentation,
+    )
 
-  r.cursor(
-    box = rect(box.xy + vec2(line_number_width + 20, 0), box.wh - vec2(10, 0) - vec2(line_number_width + 20, 0)),
-    gt = gt,
-    pos = editor.visual_pos,
-    cpos = editor.cursor,
-    text = editor.text,
-  )
+    r.cursor(
+      gt = gt,
+      pos = editor.visual_pos,
+      cpos = editor.cursor,
+      text = editor.text,
+    )
 
-  r.scroll_bar(
-    box = rect(box.xy + vec2(box.w - 10, 0), vec2(10, box.h)),
-    pos = editor.visual_pos,
-    size = size,
-    total = total + size - 1,
-  )
+  frame(x = parentBox.w - 10, w = 10):
+    r.scroll_bar(
+      pos = editor.visual_pos,
+      size = size,
+      total = total + size - 1,
+    )
 
 proc animate*(editor: var TextEditor, dt: float32, gt: GlyphTable): bool =
   if editor.pos != editor.visual_pos:

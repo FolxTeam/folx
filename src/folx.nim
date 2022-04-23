@@ -1,6 +1,6 @@
 import sequtils, os, times, math, unicode, std/monotimes, options
-import pixwindy, pixie, cligen
-import render, configuration, git, text, text_editor, side_explorer, explorer, title
+import cligen
+import markup, configuration, git, text, text_editor, side_explorer, explorer, title
 
 proc contains*(b: Rect, a: GVec2): bool =
   let a = a.vec2
@@ -8,7 +8,7 @@ proc contains*(b: Rect, a: GVec2): bool =
 
 proc getFileExt*(file: string): string =
   if file != "":
-    let (dir, name, ext) = splitFile(file)
+    let (_, _, ext) = splitFile(file)
     if ext.len > 0:
       return ext[1..^1]
     else:
@@ -127,106 +127,108 @@ proc folx(files: seq[string] = @[], workspace: string = "", args: seq[string]) =
   proc display =
     image.clear colorTheme.bgTextArea.color.rgbx
 
-    if main_explorer.display:
-      var box = rect(vec2(0, 40), vec2(260, window.size.vec2.y - 60))
-      var dy = round(editor_gt.font.size * 1.27)
-      var y = box.y - dy * (pos mod 1)
-      var middle_x = box.x + ( ( box.w - toRunes("Explorer").width(editor_gt).float32 ) / 2 )
-
-      r.fillStyle = colorTheme.bgExplorer
-      r.fillRect box
-
-      r.image.draw toRunes("Explorer"), colorTheme.cActive, vec2(middle_x.float32, y), box, editor_gt, configuration.colorTheme.bgExplorer
-      y += dy
-
-      r.image.draw toRunes(main_explorer.dir.path), colorTheme.cInActive, vec2(box.x, y), box, editor_gt, configuration.colorTheme.bgExplorer
-      y += dy
-
-      r.side_explorer_area(
-        image = image,
-        box = box,
-        pos = main_explorer.pos,
-        gt = editor_gt,
-        bg = configuration.colorTheme.bgExplorer,
-        dir = main_explorer.dir,
-        explorer = main_explorer,
-        count_items = 0,
-        y = y,
-        nesting = 0,
-      )
-
-      if opened_files.len != 0:
-        r.text_editor(
-          box = rect(vec2(box.w, 40), window.size.vec2 - vec2(box.w, 60)),
+    frame(wh = window.size, clip=true):
+      if explorer.display:
+        r.explorer_area(
+          image = image,
+          box = rect(vec2(0, 0), window.size.vec2 - vec2(10, 20)),
           gt = editor_gt,
           bg = colorTheme.bgTextArea,
-          editor = text_editor,
+          expl = explorer,
         )
 
-      r.title_bar(
-        box = rect(vec2(0, 0), vec2(window.size.vec2.x, 40)),
-        gt = interface_gt,
-      )
+      elif main_explorer.display:
+        var box = rect(vec2(0, 40), vec2(260, window.size.vec2.y - 60))
+        var dy = round(editor_gt.font.size * 1.27)
+        var y = box.y - dy * (pos mod 1)
+        var middle_x = box.x + ( ( box.w - "Explorer".toRunes.width(editor_gt).float32 ) / 2 )
 
-      r.status_bar(
-        box = rect(vec2(0, window.size.vec2.y - 20), vec2(window.size.vec2.x, 20)),
-        gt = interface_gt,
-        bg = colorTheme.bgStatusBar,
-        fieldsStart = @[
-          ("Items: ", $main_explorer.count_items),
-          ("Item: ", $main_explorer.item_index),
-        ],
-        fieldsEnd = @[
-          ("", ""),
-        ] & (
-          if main_explorer.current_dir.gitBranch.isSome: @[
-            ("git: ", main_explorer.current_dir.gitBranch.get),
-          ] else: @[]
-        ) & @[
-          ("", if opened_files.len > 0: getFileExt(opened_files[0]) else: getFileExt(""))
-        ],
-      )
-    elif explorer.display:
-      r.explorer_area(
-        image = image,
-        box = rect(vec2(0, 0), window.size.vec2 - vec2(10, 20)),
-        gt = editor_gt,
-        bg = colorTheme.bgTextArea,
-        expl = explorer,
-      )
-    else:
+        r.fillStyle = colorTheme.bgExplorer
+        r.fillRect box
 
-      if opened_files.len != 0:
-        r.text_editor(
-          box = rect(vec2(0, 40), window.size.vec2 - vec2(0, 60)),
+        r.image.draw "Explorer".toRunes, colorTheme.cActive, vec2(middle_x.float32, y), box, editor_gt, configuration.colorTheme.bgExplorer
+        y += dy
+
+        r.image.draw toRunes(main_explorer.dir.path), colorTheme.cInActive, vec2(box.x, y), box, editor_gt, configuration.colorTheme.bgExplorer
+        y += dy
+
+        r.side_explorer_area(
+          image = image,
+          box = box,
+          pos = main_explorer.pos,
           gt = editor_gt,
-          bg = colorTheme.bgTextArea,
-          editor = text_editor,
+          bg = configuration.colorTheme.bgExplorer,
+          dir = main_explorer.dir,
+          explorer = main_explorer,
+          count_items = 0,
+          y = y,
+          nesting = 0,
         )
 
-      r.title_bar(
-        box = rect(vec2(0, 0), vec2(window.size.vec2.x, 40)),
-        gt = interface_gt,
-      )
+        if opened_files.len != 0:
+          frame(x = box.w, w = parentBox.w - box.w, y = 40, h = parentBox.h - 60):
+            r.text_editor(
+              gt = editor_gt,
+              bg = colorTheme.bgTextArea,
+              editor = text_editor,
+            )
 
-      r.status_bar(
-        box = rect(vec2(0, window.size.vec2.y - 20), vec2(window.size.vec2.x, 20)),
-        gt = interface_gt,
-        bg = colorTheme.bgStatusBar,
-        fieldsStart = @[
-          ("Line: ", $text_editor.cursor[1]),
-          ("Col: ", $text_editor.cursor[0]),
-        ],
-        fieldsEnd = @[
-          ("", ""),
-        ] & (
-          if main_explorer.current_dir.gitBranch.isSome: @[
-            ("git: ", main_explorer.current_dir.gitBranch.get),
-          ] else: @[]
-        ) & @[
-          ("", if opened_files.len > 0: getFileExt(opened_files[0]) else: getFileExt(""))
-        ],
-      )
+        r.title_bar(
+          box = rect(vec2(0, 0), vec2(window.size.vec2.x, 40)),
+          gt = interface_gt,
+        )
+
+        r.status_bar(
+          box = rect(vec2(0, window.size.vec2.y - 20), vec2(window.size.vec2.x, 20)),
+          gt = interface_gt,
+          bg = colorTheme.bgStatusBar,
+          fieldsStart = @[
+            ("Items: ", $main_explorer.count_items),
+            ("Item: ", $main_explorer.item_index),
+          ],
+          fieldsEnd = @[
+            ("", ""),
+          ] & (
+            if main_explorer.current_dir.gitBranch.isSome: @[
+              ("git: ", main_explorer.current_dir.gitBranch.get),
+            ] else: @[]
+          ) & @[
+            ("", if opened_files.len > 0: getFileExt(opened_files[0]) else: getFileExt(""))
+          ],
+        )
+      
+      else:
+        if opened_files.len != 0:
+          frame(y = 40, h = parentBox.h - 60):
+            r.text_editor(
+              gt = editor_gt,
+              bg = colorTheme.bgTextArea,
+              editor = text_editor,
+            )
+
+        r.title_bar(
+          box = rect(vec2(0, 0), vec2(window.size.vec2.x, 40)),
+          gt = interface_gt,
+        )
+
+        r.status_bar(
+          box = rect(vec2(0, window.size.vec2.y - 20), vec2(window.size.vec2.x, 20)),
+          gt = interface_gt,
+          bg = colorTheme.bgStatusBar,
+          fieldsStart = @[
+            ("Line: ", $text_editor.cursor[1]),
+            ("Col: ", $text_editor.cursor[0]),
+          ],
+          fieldsEnd = @[
+            ("", ""),
+          ] & (
+            if main_explorer.current_dir.gitBranch.isSome: @[
+              ("git: ", main_explorer.current_dir.gitBranch.get),
+            ] else: @[]
+          ) & @[
+            ("", if opened_files.len > 0: getFileExt(opened_files[0]) else: getFileExt(""))
+          ],
+        )
 
     window.draw image
 
