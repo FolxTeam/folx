@@ -184,7 +184,7 @@ proc parseNimCode*(s: Text, state: NimParseState, len = 100): tuple[segments: se
         else:
           if (not wasDot) and (r == rune"."):
             wasDot = true
-          elif (not wasDot) and (r == rune"'") and exist(l + 1) and (peek(l + 1).isAlpha):
+          elif (not wasQuote) and (r == rune"'") and exist(l + 1) and (peek(l + 1).isAlpha):
             wasQuote = true
           elif (r notin digits):
             break
@@ -265,8 +265,37 @@ proc parseNimCode*(s: Text, state: NimParseState, len = 100): tuple[segments: se
         for (k, p, n) in sets:
           set k, p, n
         skip l
-      # todo: multiline strings
-      # todo: raw strings
+  
+    template multilineStr =
+      var l = 1
+      var isError: bool
+      var sets: seq[(CodeKind, int, int)]
+      var quoteCount = 0
+
+      while true:
+        if not exist(l): isError = true; break
+        let r = peek(l)
+        escape(r, l) do:
+          sets.add (sError, l - 1, 2)
+        do:
+          sets.add (sStringLitEscape, l - 1, n)
+        inc l
+        if r == "\"".rune:
+          inc quoteCount
+          if quoteCount == 3: break
+        else:
+          quoteCount = 0
+      
+      if isError:
+        add sError, l
+      else:
+        add sStringLit, l
+        skip -l
+        for (k, p, n) in sets:
+          set k, p, n
+        skip l
+    
+    # todo: raw strings
 
     template chr =
       var l = 1
@@ -294,11 +323,15 @@ proc parseNimCode*(s: Text, state: NimParseState, len = 100): tuple[segments: se
         add sStringLit, l
 
     let r = peek()
-    if r.isAlpha:                 ident
-    elif r == "\"".rune:          str
-    elif r == rune"'":            chr
-    elif r == rune"#":            comment
-    elif r in "0123456789".runes: number
+    if r.isAlpha:                  ident
+    elif r == rune"'":             chr
+    elif r == rune"#":             comment
+    elif r in "0123456789".runes:  number
+    
+    elif r == "\"".rune and peek(1) == r and peek(2) == r:
+      multilineStr
+    
+    elif r == "\"".rune:           str
     else:
       add sText
     
