@@ -1,11 +1,9 @@
 import os, std/unicode
 import pixwindy, pixie
-import render, configuration
-
+import render, configuration, markup
 
 proc status_bar*(
   r: Context,
-  box: Rect,
   gt: var GlyphTable,
   bg: ColorRgb,
   fieldsStart: seq[tuple[field: string, value: string]],
@@ -15,6 +13,8 @@ proc status_bar*(
   const margin = vec2(8, 2)
   const marginEnd = vec2(0, 2)
   var s = ""
+
+  let box = parentBox
 
   for i in fieldsStart:
     s.add(i.field & i.value & "   ")

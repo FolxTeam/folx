@@ -1,6 +1,6 @@
 import std/sequtils, os, std/unicode, math, strutils, std/algorithm
 import pixwindy, pixie
-import render, configuration
+import render, configuration, markup
 
 type 
   File* = object
@@ -139,19 +139,20 @@ proc updateExplorer(explorer: var SideExplorer, file: File) =
   explorer.current_item_ext = file.ext
 
 proc drawDir(
+  r: Context,
   explorer: var SideExplorer,
   image: Image,
   file: File,
-  r: Context,
-  box: Rect,
   nesting_indent: string,
   text: string,
   gt: var GlyphTable,
   bg: ColorRgb,
   y: var float32,
-  dy: float32,
   icon_const: float32
   ) =
+
+  let box = parentBox
+  let dy = round(gt.font.size * 1.40)
 
   image.draw(getIcon(explorer, file), translate(vec2(box.x + 20 + nesting_indent.toRunes.width(gt).float32, y + 4)) * scale(vec2(icon_const * dy, icon_const * dy)))
   r.image.draw text.toRunes, colorTheme.cActive, vec2(box.x + 40, y), box, gt, bg
@@ -159,18 +160,19 @@ proc drawDir(
 
 
 proc drawSelectedDir(
+  r: Context,
   explorer: var SideExplorer,
   image: Image,
   file: File,
-  r: Context,
-  box: Rect,
   nesting_indent: string,
   text: string,
   gt: var GlyphTable,
   y: var float32,
-  dy: float32,
   icon_const: float32
   ) =
+
+  let box = parentBox
+  let dy = round(gt.font.size * 1.40)
 
   updateExplorer(explorer, file)
 
@@ -187,18 +189,19 @@ proc drawSelectedDir(
 
 
 proc drawFile(
+  r: Context,
   image: Image,
   file: File,
-  r: Context,
-  box: Rect,
   nesting_indent: string,
   text: string,
   gt: var GlyphTable,
   bg: ColorRgb,
   y: var float32,
-  dy: float32,
   icon_const: float32
   ) =
+
+  let box = parentBox
+  let dy = round(gt.font.size * 1.40)
 
   image.draw(getIcon(file), translate(vec2(box.x + 20 + nesting_indent.toRunes.width(gt).float32, y + 4)) * scale(vec2(icon_const * dy, icon_const * dy)))
 
@@ -207,18 +210,19 @@ proc drawFile(
     
 
 proc drawSelectedFile(
+  r: Context,
   explorer: var SideExplorer,
   image: Image,
   file: File,
-  r: Context,
-  box: Rect,
   nesting_indent: string,
   text: string,
   gt: var GlyphTable,
   y: var float32,
-  dy: float32,
   icon_const: float32
   ) =
+
+  let box = parentBox
+  let dy = round(gt.font.size * 1.40)
 
   updateExplorer(explorer, file)
 
@@ -237,7 +241,6 @@ proc drawSelectedFile(
 proc side_explorer_area*(
   r: Context,
   image: Image,
-  box: Rect,
   pos: float32,
   gt: var GlyphTable,
   bg: ColorRgb,
@@ -248,9 +251,11 @@ proc side_explorer_area*(
   nesting: int32,
   ) : (float32, int32) {.discardable.} =
 
+
   let 
     dy = round(gt.font.size * 1.40)
     icon_const = 0.06
+    box = parentBox
   var 
     y = y
     dir = dir
@@ -283,16 +288,16 @@ proc side_explorer_area*(
     of PathComponent.pcFile:
       if count_items in pos.int..pos.ceil.int+size:
         if count_items == int(explorer.item_index):
-          drawSelectedFile(explorer, image, file, r, box, nesting_indent, text, gt, y, dy, icon_const)
+          r.drawSelectedFile(explorer, image, file, nesting_indent, text, gt, y, icon_const)
         else:
-          drawFile(image, file, r, box, nesting_indent, text, gt, bg, y, dy, icon_const)
+          r.drawFile(image, file, nesting_indent, text, gt, bg, y, icon_const)
 
     of PathComponent.pcDir:
       if count_items in pos.int..pos.ceil.int+size:
         if count_items == int(explorer.item_index):
-          drawSelectedDir(explorer, image, file, r, box, nesting_indent, text, gt, y, dy, icon_const)
+          r.drawSelectedDir(explorer, image, file, nesting_indent, text, gt, y, icon_const)
         else:
-          drawDir(explorer, image, file, r, box, nesting_indent, text, gt, bg, y, dy, icon_const)
+          r.drawDir(explorer, image, file, nesting_indent, text, gt, bg, y, icon_const)
       
       if OpenDir(path: file.path / file.name & file.ext) in explorer.open_dirs:
 
@@ -300,7 +305,6 @@ proc side_explorer_area*(
 
         (y, count_items) = r.side_explorer_area(
           image = image,
-          box = box,
           pos = pos,
           gt = gt,
           bg = bg,

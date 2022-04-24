@@ -257,11 +257,12 @@ proc file(
 proc explorer_area*(
   r: contexts.Context,
   image: Image,
-  box: bumpy.Rect,
   gt: var GlyphTable,
   bg: ColorRgb,
   expl: var Explorer,
   ) =
+
+  let box = parentBox
 
   let dy = round(gt.font.size * 1.27)
   var y = box.y - dy * (expl.pos mod 1)

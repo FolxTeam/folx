@@ -92,73 +92,74 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
 
     frame(wh = window.size, clip=true):
       if explorer.display:
-        r.explorer_area(
-          image = image,
-          box = rect(vec2(0, 0), window.size.vec2 - vec2(10, 20)),
-          gt = editor_gt,
-          bg = colorTheme.bgTextArea,
-          expl = explorer,
-        )
+        frame(x = 0 , y = 0 , wh = window.size.vec2 - vec2(10, 20)):
+          r.explorer_area(
+            image = image,
+            gt = editor_gt,
+            bg = colorTheme.bgTextArea,
+            expl = explorer,
+          )
 
       elif main_explorer.display:
-        var box = rect(vec2(0, 40), vec2(260, window.size.vec2.y - 60))
-        var dy = round(editor_gt.font.size * 1.27)
-        var y = box.y - dy * (pos mod 1)
-        var middle_x = box.x + ( ( box.w - "Explorer".toRunes.width(editor_gt).float32 ) / 2 )
+        
+        frame(x = 0 , y = 40 , w = 260, h = window.size.vec2.y - 60):
+          var box = parentBox
+          var dy = round(editor_gt.font.size * 1.27)
+          var y = box.y - dy * (pos mod 1)
+          var middle_x = box.x + ( ( box.w - "Explorer".toRunes.width(editor_gt).float32 ) / 2 )
 
-        r.fillStyle = colorTheme.bgExplorer
-        r.fillRect box
+          r.fillStyle = colorTheme.bgExplorer
+          r.fillRect box
 
-        r.image.draw "Explorer".toRunes, colorTheme.cActive, vec2(middle_x.float32, y), box, editor_gt, configuration.colorTheme.bgExplorer
-        y += dy
+          r.image.draw "Explorer".toRunes, colorTheme.cActive, vec2(middle_x.float32, y), box, editor_gt, configuration.colorTheme.bgExplorer
+          y += dy
 
-        r.image.draw toRunes(main_explorer.dir.path), colorTheme.cInActive, vec2(box.x, y), box, editor_gt, configuration.colorTheme.bgExplorer
-        y += dy
+          r.image.draw toRunes(main_explorer.dir.path), colorTheme.cInActive, vec2(box.x, y), box, editor_gt, configuration.colorTheme.bgExplorer
+          y += dy
+        
+          r.side_explorer_area(
+            image = image,
+            pos = main_explorer.pos,
+            gt = editor_gt,
+            bg = configuration.colorTheme.bgExplorer,
+            dir = main_explorer.dir,
+            explorer = main_explorer,
+            count_items = 0,
+            y = y,
+            nesting = 0,
+          )
 
-        r.side_explorer_area(
-          image = image,
-          box = box,
-          pos = main_explorer.pos,
-          gt = editor_gt,
-          bg = configuration.colorTheme.bgExplorer,
-          dir = main_explorer.dir,
-          explorer = main_explorer,
-          count_items = 0,
-          y = y,
-          nesting = 0,
-        )
+          if opened_files.len != 0:
+            frame(x = parentBox.w , y = 0 , w = window.size.vec2.x - parentBox.w, h = window.size.vec2.y - 60):
+              r.text_editor(
+                gt = editor_gt,
+                bg = colorTheme.bgTextArea,
+                editor = text_editor,
+              )
+        
+        frame(x = 0 , y = 0 , w = window.size.vec2.x, h = 40):
+          r.title_bar(
+            gt = interface_gt,
+          )
 
-        if opened_files.len != 0:
-          frame(x = box.w, w = parentBox.w - box.w, y = 40, h = parentBox.h - 60):
-            r.text_editor(
-              gt = editor_gt,
-              bg = colorTheme.bgTextArea,
-              editor = text_editor,
-            )
-
-        r.title_bar(
-          box = rect(vec2(0, 0), vec2(window.size.vec2.x, 40)),
-          gt = interface_gt,
-        )
-
-        r.status_bar(
-          box = rect(vec2(0, window.size.vec2.y - 20), vec2(window.size.vec2.x, 20)),
-          gt = interface_gt,
-          bg = colorTheme.bgStatusBar,
-          fieldsStart = @[
-            ("Items: ", $main_explorer.count_items),
-            ("Item: ", $main_explorer.item_index),
-          ],
-          fieldsEnd = @[
-            ("", ""),
-          ] & (
-            if main_explorer.current_dir.gitBranch.isSome: @[
-              ("git: ", main_explorer.current_dir.gitBranch.get),
-            ] else: @[]
-          ) & @[
-            ("", if opened_files.len > 0: getFileExt(opened_files[0]) else: getFileExt(""))
-          ],
-        )
+        frame(x = 0, y = window.size.vec2.y - 20, w = window.size.vec2.x, h = 20):
+          r.status_bar(
+            gt = interface_gt,
+            bg = colorTheme.bgStatusBar,
+            fieldsStart = @[
+              ("Items: ", $main_explorer.count_items),
+              ("Item: ", $main_explorer.item_index),
+            ],
+            fieldsEnd = @[
+              ("", ""),
+            ] & (
+              if main_explorer.current_dir.gitBranch.isSome: @[
+                ("git: ", main_explorer.current_dir.gitBranch.get),
+              ] else: @[]
+            ) & @[
+              ("", if opened_files.len > 0: getFileExt(opened_files[0]) else: getFileExt(""))
+            ],
+          )
       
       else:
         if opened_files.len != 0:
@@ -169,29 +170,29 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
               editor = text_editor,
             )
 
-        r.title_bar(
-          box = rect(vec2(0, 0), vec2(window.size.vec2.x, 40)),
-          gt = interface_gt,
-        )
+        frame(x = 0, y = 0, w = window.size.vec2.x, h = 40):
+          r.title_bar(
+            gt = interface_gt,
+          )
 
-        r.status_bar(
-          box = rect(vec2(0, window.size.vec2.y - 20), vec2(window.size.vec2.x, 20)),
-          gt = interface_gt,
-          bg = colorTheme.bgStatusBar,
-          fieldsStart = @[
-            ("Line: ", $text_editor.cursor[1]),
-            ("Col: ", $text_editor.cursor[0]),
-          ],
-          fieldsEnd = @[
-            ("", ""),
-          ] & (
-            if main_explorer.current_dir.gitBranch.isSome: @[
-              ("git: ", main_explorer.current_dir.gitBranch.get),
-            ] else: @[]
-          ) & @[
-            ("", if opened_files.len > 0: getFileExt(opened_files[0]) else: getFileExt(""))
-          ],
-        )
+        frame(x = 0, y = window.size.vec2.y - 20, w = window.size.vec2.x, h = 20):
+          r.status_bar(
+            gt = interface_gt,
+            bg = colorTheme.bgStatusBar,
+            fieldsStart = @[
+              ("Line: ", $text_editor.cursor[1]),
+              ("Col: ", $text_editor.cursor[0]),
+            ],
+            fieldsEnd = @[
+              ("", ""),
+            ] & (
+              if main_explorer.current_dir.gitBranch.isSome: @[
+                ("git: ", main_explorer.current_dir.gitBranch.get),
+              ] else: @[]
+            ) & @[
+              ("", if opened_files.len > 0: getFileExt(opened_files[0]) else: getFileExt(""))
+            ],
+          )
 
     window.draw image
 
