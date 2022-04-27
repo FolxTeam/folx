@@ -221,12 +221,14 @@ proc cursor(
 
 
 
-proc text_editor*(
-  r: Context,
-  editor: TextEditor,
-  gt: var GlyphTable,
-  bg: ColorRgb,
-) =
+component TextEditor:
+  proc handle(
+    editor: TextEditor,
+    r: Context,
+    gt: var GlyphTable,
+    bg: ColorRgb,
+  )
+
   let
     size = (parentBox.h / gt.font.size).ceil.int
     total = editor.text.lines.len

@@ -1,4 +1,4 @@
-import os, std/unicode
+import std/unicode
 import pixwindy, pixie
 import render, configuration, markup
 

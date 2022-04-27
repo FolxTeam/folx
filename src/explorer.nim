@@ -1,4 +1,4 @@
-import std/options, os, std/unicode, math, strutils
+import std/options, os, std/unicode, math
 import pixwindy, pixie, std/algorithm, times
 import render, configuration, markup
 
@@ -254,13 +254,14 @@ proc file(
   r.image.draw ($file.info.lastWriteTime.format("hh:mm dd/MM/yy")).toRunes, colorTheme.cActive, vec2(box.x + 350, box.y), box, gt, colorTheme.bgTextArea
 
 
-proc explorer_area*(
-  r: contexts.Context,
-  image: Image,
-  gt: var GlyphTable,
-  bg: ColorRgb,
-  expl: var Explorer,
-  ) =
+component Explorer:
+  proc handle(
+    expl: var Explorer,
+    r: contexts.Context,
+    image: Image,
+    gt: var GlyphTable,
+    bg: ColorRgb,
+  )
 
   let box = parentBox
 
