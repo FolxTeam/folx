@@ -91,8 +91,6 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
   component Folx {.noexport.}:
     if explorer.display:
       Explorer explorer(wh = window.size.vec2 - vec2(10, 20)):
-        r = r
-        image = image
         gt = editor_gt
         bg = colorTheme.bgTextArea
 
@@ -126,74 +124,67 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
 
         if opened_files.len != 0:
           TextEditor text_editor(x = parentBox.w, y = 0, w = window.size.vec2.x - parentBox.w, h = window.size.vec2.y - 60):
-            r = r
             gt = editor_gt
             bg = colorTheme.bgTextArea
 
-      frame(x = 0 , y = 0 , w = window.size.vec2.x, h = 40):
-        r.title_bar(
-          gt = interface_gt,
-        )
+      TitleBar(w = window.size.vec2.x, h = 40):
+        gt = interface_gt
 
-      frame(x = 0, y = window.size.vec2.y - 20, w = window.size.vec2.x, h = 20):
-        r.status_bar(
-          gt = interface_gt,
-          bg = colorTheme.bgStatusBar,
-          fieldsStart = @[
-            ("Items: ", $main_explorer.count_items),
-            ("Item: ", $main_explorer.item_index),
-          ],
-          fieldsEnd = @[
-            ("", ""),
-          ] & (
-            if main_explorer.current_dir.gitBranch.isSome: @[
-              ("git: ", main_explorer.current_dir.gitBranch.get),
-            ] else: @[]
-          ) & @[
-            ("", if opened_files.len > 0: getFileExt(opened_files[0]) else: getFileExt(""))
-          ],
-        )
+      StatusBar(y = window.size.vec2.y - 20, w = window.size.vec2.x, h = 20):
+        gt = interface_gt
+        bg = colorTheme.bgStatusBar
+
+        fieldsStart = @[
+          ("Items: ", $main_explorer.count_items),
+          ("Item: ", $main_explorer.item_index),
+        ]
+
+        fieldsEnd = @[
+          ("", ""),
+        ] & (
+          if main_explorer.current_dir.gitBranch.isSome: @[
+            ("git: ", main_explorer.current_dir.gitBranch.get),
+          ] else: @[]
+        ) & @[
+          ("", if opened_files.len > 0: getFileExt(opened_files[0]) else: getFileExt(""))
+        ]
 
     else:
       if opened_files.len != 0:
         TextEditor text_editor(y = 40, h = parentBox.h - 60):
-          r = r
           gt = editor_gt
           bg = colorTheme.bgTextArea
 
-      frame(x = 0, y = 0, w = window.size.vec2.x, h = 40):
-        r.title_bar(
-          gt = interface_gt,
-        )
+      TitleBar(w = window.size.vec2.x, h = 40):
+        gt = interface_gt
 
-      frame(x = 0, y = window.size.vec2.y - 20, w = window.size.vec2.x, h = 20):
-        r.status_bar(
-          gt = interface_gt,
-          bg = colorTheme.bgStatusBar,
-          fieldsStart = @[
-            ("Line: ", $text_editor.cursor[1]),
-            ("Col: ", $text_editor.cursor[0]),
-          ],
-          fieldsEnd = @[
-            ("", ""),
-          ] & (
-            if main_explorer.current_dir.gitBranch.isSome: @[
-              ("git: ", main_explorer.current_dir.gitBranch.get),
-            ] else: @[]
-          ) & @[
-            ("", if opened_files.len > 0: getFileExt(opened_files[0]) else: getFileExt(""))
-          ],
-        )
+      StatusBar(y = window.size.vec2.y - 20, w = window.size.vec2.x, h = 20):
+        gt = interface_gt
+        bg = colorTheme.bgStatusBar
+
+        fieldsStart = @[
+          ("Line: ", $text_editor.cursor[1]),
+          ("Col: ", $text_editor.cursor[0]),
+        ]
+
+        fieldsEnd = @[
+          ("", ""),
+        ] & (
+          if main_explorer.current_dir.gitBranch.isSome: @[
+            ("git: ", main_explorer.current_dir.gitBranch.get),
+          ] else: @[]
+        ) & @[
+          ("", if opened_files.len > 0: getFileExt(opened_files[0]) else: getFileExt(""))
+        ]
 
 
   proc display =
     image.clear colorTheme.bgTextArea.color.rgbx
 
     frame(wh = window.size, clip=true):
-      handle Folx
+      Folx.handle(r, image)
 
     window.draw image
-
 
 
   window.onCloseRequest = proc =

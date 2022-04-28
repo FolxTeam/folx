@@ -1,4 +1,4 @@
-import std/options, os, std/unicode, math
+import std/options, os, std/unicode, math, macros
 import pixwindy, pixie, std/algorithm, times
 import render, configuration, markup
 
@@ -168,24 +168,22 @@ proc onButtonDown*(
   
   else: discard
 
-proc disk(
-  r: contexts.Context,
-  image: Image,
-  gt: var GlyphTable,
-  disk: string,
-  ) =
+component Disk {.noexport.}:
+  proc handle(
+    disk: string,
+    gt: var GlyphTable,
+  )
 
   let box = parentBox
   let dy = round(gt.font.size * 1.27)
 
-  r.image.draw (disk).toRunes, colorTheme.cActive, vec2(box.x + 10, box.y), box, gt, colorTheme.bgSelection
+  image.draw (disk).toRunes, colorTheme.cActive, vec2(box.x + 10, box.y), box, gt, colorTheme.bgSelection
 
-proc selectedDisk(
-  r: contexts.Context,
-  image: Image,
-  gt: var GlyphTable,
-  disk: string,
-  ) =
+component SelectedDisk {.noexport.}:
+  proc handle(
+    disk: string,
+    gt: var GlyphTable,
+  )
 
   let box = parentBox
   let dy = round(gt.font.size * 1.27)
@@ -196,14 +194,13 @@ proc selectedDisk(
   r.fillStyle = colorTheme.bgSelectionLabel
   r.fillRect rect(vec2(0, box.y), vec2(2, dy))
 
-  r.image.draw (disk).toRunes, colorTheme.cActive, vec2(box.x + 10, box.y), box, gt, colorTheme.bgSelection
+  image.draw (disk).toRunes, colorTheme.cActive, vec2(box.x + 10, box.y), box, gt, colorTheme.bgSelection
 
-proc selectedItem(
-  r: contexts.Context,
-  image: Image,
-  gt: var GlyphTable,
-  file: File,
-  ) =
+component SelectedItem {.noexport.}:
+  proc handle(
+    file: File,
+    gt: var GlyphTable,
+  )
 
   let box = parentBox
   let dy = round(gt.font.size * 1.27)
@@ -216,49 +213,45 @@ proc selectedItem(
   
   image.draw(getIcon(file), translate(vec2(box.x + 20, box.y + 4)) * scale(vec2(0.06 * dy, 0.06 * dy)))
 
-  r.image.draw (file.name & file.ext).toRunes, colorTheme.cActive, vec2(box.x + 40, box.y), box, gt, colorTheme.bgSelection
-  r.image.draw ($file.info.size).toRunes, colorTheme.cActive, vec2(box.x + 250, box.y), box, gt, colorTheme.bgSelection
-  r.image.draw ($file.info.lastWriteTime.format("hh:mm dd/MM/yy")).toRunes, colorTheme.cActive, vec2(box.x + 350, box.y), box, gt, colorTheme.bgSelection
+  image.draw (file.name & file.ext).toRunes, colorTheme.cActive, vec2(box.x + 40, box.y), box, gt, colorTheme.bgSelection
+  image.draw ($file.info.size).toRunes, colorTheme.cActive, vec2(box.x + 250, box.y), box, gt, colorTheme.bgSelection
+  image.draw ($file.info.lastWriteTime.format("hh:mm dd/MM/yy")).toRunes, colorTheme.cActive, vec2(box.x + 350, box.y), box, gt, colorTheme.bgSelection
 
 
-proc dir(
-  r: contexts.Context,
-  image: Image,
-  gt: var GlyphTable,
-  file: File,
-  ) =
-
-  let box = parentBox
-  let dy = round(gt.font.size * 1.27)
-
-  image.draw(getIcon(file), translate(vec2(box.x + 20, box.y + 4)) * scale(vec2(0.06 * dy, 0.06 * dy)))
-
-  r.image.draw (file.name & file.ext).toRunes, colorTheme.cActive, vec2(box.x + 40, box.y), box, gt, colorTheme.bgTextArea
-  r.image.draw ($file.info.size).toRunes, colorTheme.cActive, vec2(box.x + 250, box.y), box, gt, colorTheme.bgTextArea
-  r.image.draw ($file.info.lastWriteTime.format("hh:mm dd/MM/yy")).toRunes, colorTheme.cActive, vec2(box.x + 350, box.y), box, gt, colorTheme.bgTextArea
-
-proc file(
-  r: contexts.Context,
-  image: Image,
-  gt: var GlyphTable,
-  file: File,
-  ) =
+component Dir {.noexport.}:
+  proc handle(
+    file: File,
+    gt: var GlyphTable,
+  )
 
   let box = parentBox
   let dy = round(gt.font.size * 1.27)
 
   image.draw(getIcon(file), translate(vec2(box.x + 20, box.y + 4)) * scale(vec2(0.06 * dy, 0.06 * dy)))
 
-  r.image.draw (file.name & file.ext).toRunes, colorTheme.cActive, vec2(box.x + 40, box.y), box, gt, colorTheme.bgTextArea
-  r.image.draw ($file.info.size).toRunes, colorTheme.cActive, vec2(box.x + 250, box.y), box, gt, colorTheme.bgTextArea
-  r.image.draw ($file.info.lastWriteTime.format("hh:mm dd/MM/yy")).toRunes, colorTheme.cActive, vec2(box.x + 350, box.y), box, gt, colorTheme.bgTextArea
+  image.draw (file.name & file.ext).toRunes, colorTheme.cActive, vec2(box.x + 40, box.y), box, gt, colorTheme.bgTextArea
+  image.draw ($file.info.size).toRunes, colorTheme.cActive, vec2(box.x + 250, box.y), box, gt, colorTheme.bgTextArea
+  image.draw ($file.info.lastWriteTime.format("hh:mm dd/MM/yy")).toRunes, colorTheme.cActive, vec2(box.x + 350, box.y), box, gt, colorTheme.bgTextArea
+
+component File {.noexport.}:
+  proc handle(
+    file: File,
+    gt: var GlyphTable,
+  )
+
+  let box = parentBox
+  let dy = round(gt.font.size * 1.27)
+
+  image.draw(getIcon(file), translate(vec2(box.x + 20, box.y + 4)) * scale(vec2(0.06 * dy, 0.06 * dy)))
+
+  image.draw (file.name & file.ext).toRunes, colorTheme.cActive, vec2(box.x + 40, box.y), box, gt, colorTheme.bgTextArea
+  image.draw ($file.info.size).toRunes, colorTheme.cActive, vec2(box.x + 250, box.y), box, gt, colorTheme.bgTextArea
+  image.draw ($file.info.lastWriteTime.format("hh:mm dd/MM/yy")).toRunes, colorTheme.cActive, vec2(box.x + 350, box.y), box, gt, colorTheme.bgTextArea
 
 
 component Explorer:
   proc handle(
     expl: var Explorer,
-    r: contexts.Context,
-    image: Image,
     gt: var GlyphTable,
     bg: ColorRgb,
   )
@@ -285,46 +278,24 @@ component Explorer:
   if not expl.display_disk_list:
     for i, file in expl.files.pairs:
       if i == int(expl.item_index):
-        frame(x = parentBox.x, y = y, w = parentBox.w):
-          r.selectedItem(
-            gt = gt,
-            image = image,
-            file = file,
-          )
+        SelectedItem file(x = parentBox.x, y = y, w = parentBox.w):
+          gt = gt
       else:
         if file.info.kind == PathComponent.pcDir:
-          frame(x = parentBox.x, y = y, w = parentBox.w):
-            r.dir(
-              gt = gt,
-              image = image,
-              file = file,
-            )
+          Dir file(x = parentBox.x, y = y, w = parentBox.w):
+            gt = gt
         else:
-          frame(x = parentBox.x, y = y, w = parentBox.w):
-            r.file(
-              gt = gt,
-              image = image,
-              file = file,
-            )
-            
+          File file(x = parentBox.x, y = y, w = parentBox.w):
+            gt = gt
+
       y += dy
   else:
     for i, disk in expl.disk_list:
       if i == int(expl.item_index):
-        frame(x = parentBox.x, y = y, w = parentBox.w):
-          r.selectedDisk(
-            gt = gt,
-            image = image,
-            disk = disk,
-          )
+        SelectedDisk disk(x = parentBox.x, y = y, w = parentBox.w):
+          gt = gt
       else:
-        frame(x = parentBox.x, y = y, w = parentBox.w):
-          r.disk(
-            gt = gt,
-            image = image,
-            disk = disk,
-          )
+        Disk disk(x = parentBox.x, y = y, w = parentBox.w):
+          gt = gt
 
       y += dy
-
-

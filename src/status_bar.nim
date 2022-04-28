@@ -2,13 +2,13 @@ import std/unicode
 import pixwindy, pixie
 import render, configuration, markup
 
-proc status_bar*(
-  r: Context,
-  gt: var GlyphTable,
-  bg: ColorRgb,
-  fieldsStart: seq[tuple[field: string, value: string]],
-  fieldsEnd: seq[tuple[field: string, value: string]],
-  ) =
+component StatusBar:
+  proc handle(
+    gt: var GlyphTable,
+    bg: ColorRgb,
+    fieldsStart: seq[tuple[field: string, value: string]],
+    fieldsEnd: seq[tuple[field: string, value: string]],
+  )
 
   const margin = vec2(8, 2)
   const marginEnd = vec2(0, 2)
@@ -22,7 +22,7 @@ proc status_bar*(
   r.fillStyle = bg
   r.fillRect box
 
-  r.image.draw toRunes(s), colorTheme.cInActive, box.xy + margin, rect(box.xy, box.wh - margin), gt, bg
+  image.draw toRunes(s), colorTheme.cInActive, box.xy + margin, rect(box.xy, box.wh - margin), gt, bg
 
   s = ""
 
@@ -36,6 +36,6 @@ proc status_bar*(
 
   for i in fieldsEnd:
     if(i.field == "git: "):
-      r.image.draw(iconTheme.git, translate(start - vec2(10, -2)))
+      image.draw(iconTheme.git, translate(start - vec2(10, -2)))
 
-  r.image.draw toRunes(s), colorTheme.cInActive, start, rect(box.xy, box.wh), gt, bg
+  image.draw toRunes(s), colorTheme.cInActive, start, rect(box.xy, box.wh), gt, bg

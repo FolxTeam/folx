@@ -33,6 +33,9 @@ template parentBox*: Rect =
 
 proc makeFrame(args: seq[NimNode]): NimNode =
   let body = args[^1]
+  let
+    whs = gensym(nskLet, "wh")
+    xys = gensym(nskLet, "xy")
   let a = block:
     var r: seq[(string, NimNode)]
     for it in args[0..^2]:
@@ -53,12 +56,12 @@ proc makeFrame(args: seq[NimNode]): NimNode =
   buildAst: blockStmt empty(), stmtList do:
     if "wh" in d:
       letSection: identDefs:
-        ident"wh"
+        whs
         empty()
         call ident"vec2", d["wh"]
     else:
       letSection: identDefs:
-        ident"wh"
+        whs
         empty()
         call ident"vec2":
           call ident"float32":
@@ -70,23 +73,23 @@ proc makeFrame(args: seq[NimNode]): NimNode =
 
     if "centerIn" in d:
       letSection: identDefs:
-        ident"xy"
+        xys
         empty()
-        infix ident"+":
-          dotExpr(call(bindSym"parentBox", ident"xy"))
+        infix ident"/":
           infix ident"-":
-            infix ident"/", dotExpr(call(bindSym"parentBox"), ident"wh"), newLit 2
-            infix ident"/", ident"wh", newLit 2
+            dotExpr(d["centerIn"], ident"wh")
+            whs
+          newLit 2
 
     else:
       if "xy" in d:
         letSection: identDefs:
-          ident"xy"
+          xys
           empty()
           call ident"vec2", d["xy"]
       else:
         letSection: identDefs:
-          ident"xy"
+          xys
           empty()
           call ident"vec2":
             call ident"float32": 
@@ -97,7 +100,7 @@ proc makeFrame(args: seq[NimNode]): NimNode =
               else:        newLit 0
 
     call bindSym"frameImpl":
-      call bindSym"rect", ident"xy", ident"wh"
+      call bindSym"rect", xys, whs
       if "clip" in d: d["clip"]
       else:           newLit false
       body
@@ -116,6 +119,8 @@ macro frame*(args: varargs[untyped]) =
 macro component*(name, body: untyped) =
   var noexport: bool
   var name = name
+  let rsym = ident"r"
+  let imgsym = ident"image"
   case name
   of PragmaExpr[@ni is Ident(), Pragma[Ident(strVal: "noexport")]]:
     name = ni
@@ -155,20 +160,22 @@ macro component*(name, body: untyped) =
         stmtList:
           for x in body1: impl(x)
 
-          let b = buildAst call:
-            ident"handle"
-            name
-            if firstArg != nil: firstArg
-            for k, v in d:
-              exprEqExpr:
-                ident k
-                v
+          let b = buildAst stmtList:
+            call:
+              ident"handle"
+              name
+              rsym
+              imgsym
+              if firstArg != nil: firstArg
+              for k, v in d:
+                exprEqExpr:
+                  ident k
+                  v
+            for x in body2: impl(x)
 
           if fd.len != 0:
             makeFrame(fd & b)
           else: b
-
-          for x in body2: impl(x)
 
     case x
     # T: d=e and T(b=c): d=e
@@ -219,6 +226,14 @@ macro component*(name, body: untyped) =
         identDefs:
           gensym(nskParam)
           bracketExpr(ident"typedesc", name)
+          empty()
+        identDefs:
+          rsym
+          bindSym"Context"
+          empty()
+        identDefs:
+          imgsym
+          bindSym"Image"
           empty()
         if body.len != 0 and body[0].kind == nnkProcDef and body[0][0] == ident"handle":
           for x in body[0].params[1..^1]: x

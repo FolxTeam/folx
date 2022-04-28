@@ -98,15 +98,16 @@ proc newTextEditor*(file: string): TextEditor =
   result.indentation = result.text.indentation
 
 
-proc text_area(
-  r: Context,
-  gt: var GlyphTable,
-  pos: float32,
-  bg: ColorRgb,
-  text: Text,
-  colors: seq[ColorRgb],
-  indentation: Indentation,
-) =
+component TextArea {.noexport.}:
+  proc handle(
+    gt: var GlyphTable,
+    pos: float32,
+    bg: ColorRgb,
+    text: Text,
+    colors: seq[ColorRgb],
+    indentation: Indentation,
+  )
+
   let
     box = parentBox
     size = (box.h / gt.font.size).ceil.int
@@ -127,15 +128,15 @@ proc text_area(
     y += dy
 
 
+component LineNumbers {.noexport.}:
+  proc handle(
+    gt: var GlyphTable,
+    pos: float32,
+    bg: ColorRgb,
+    lineCount: int,
+    cursor: IVec2,
+  )
 
-proc line_numbers(
-  r: Context,
-  gt: var GlyphTable,
-  pos: float32,
-  bg: ColorRgb,
-  lineCount: int,
-  cursor: IVec2,
-) =
   let
     box = parentBox
     size = (box.h / gt.font.size).ceil.int
@@ -154,12 +155,14 @@ proc line_numbers(
       r.image.draw s, sLineNumber.color, vec2(box.x + right - w, y), box, gt, bg
     y += round(gt.font.size * 1.27)
 
-proc scroll_bar(
-  r: Context,
-  pos: float32,
-  size: int,
-  total: int
-) =
+
+component ScrollBar {.noexport.}:
+  proc handle(
+    pos: float32,
+    size: int,
+    total: int
+  )
+
   if total == 0: return
   let
     a = pos / total.float32
@@ -177,13 +180,13 @@ proc scroll_bar(
 var blink* = true;
 var blink_time* = 0;
 
-proc cursor(
-  r: Context,
-  gt: var GlyphTable,
-  pos: float32,
-  cpos: IVec2,
-  text: Text,
-) =
+component Cursor:
+  proc handle(
+    gt: var GlyphTable,
+    pos: float32,
+    cpos: IVec2,
+    text: Text,
+  )
   if text.len == 0: return
   
   var width = gt.font.size / 8
@@ -220,11 +223,9 @@ proc cursor(
     r.fillRect rect
 
 
-
 component TextEditor:
   proc handle(
     editor: TextEditor,
-    r: Context,
     gt: var GlyphTable,
     bg: ColorRgb,
   )
@@ -235,38 +236,31 @@ component TextEditor:
 
     line_number_width = float32 ($total).toRunes.width(gt)
   
-  frame(w = line_number_width + 20):
-    r.line_numbers(
-      gt = gt,
-      pos = editor.visual_pos,
-      bg = colorTheme.bgLineNumbers,
-      lineCount = total,
-      cursor = editor.cursor,
-    )
+  LineNumbers(w = line_number_width + 20):
+    gt = gt
+    pos = editor.visual_pos
+    bg = colorTheme.bgLineNumbers
+    lineCount = total
+    cursor = editor.cursor
 
-  frame(x = line_number_width + 20, w = parentBox.w - line_number_width - 20 - 10):
-    r.text_area(
-      gt = gt,
-      pos = editor.visual_pos,
-      bg = colorTheme.bgTextArea,
-      text = editor.text,
-      colors = editor.colors,
-      indentation = editor.indentation,
-    )
+  TextArea(x = line_number_width + 20, w = parentBox.w - line_number_width - 20 - 10):
+    gt = gt
+    pos = editor.visual_pos
+    bg = colorTheme.bgTextArea
+    text = editor.text
+    colors = editor.colors
+    indentation = editor.indentation
 
-    r.cursor(
-      gt = gt,
-      pos = editor.visual_pos,
-      cpos = editor.cursor,
-      text = editor.text,
-    )
+    Cursor:
+      gt = gt
+      pos = editor.visual_pos
+      cpos = editor.cursor
+      text = editor.text
 
-  frame(x = parentBox.w - 10, w = 10):
-    r.scroll_bar(
-      pos = editor.visual_pos,
-      size = size,
-      total = total + size - 1,
-    )
+  ScrollBar(x = parentBox.w - 10, w = 10):
+    pos = editor.visual_pos
+    size = size
+    total = total + size - 1
 
 proc animate*(editor: var TextEditor, dt: float32, gt: GlyphTable): bool =
   if editor.pos != editor.visual_pos:
