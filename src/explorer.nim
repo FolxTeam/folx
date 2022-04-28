@@ -1,4 +1,4 @@
-import std/options, os, std/unicode, math, macros
+import std/options, os, std/unicode, math
 import pixwindy, pixie, std/algorithm, times
 import render, configuration, markup
 
@@ -278,24 +278,24 @@ component Explorer:
   if not expl.display_disk_list:
     for i, file in expl.files.pairs:
       if i == int(expl.item_index):
-        SelectedItem file(x = parentBox.x, y = y, w = parentBox.w):
+        SelectedItem file(y = y):
           gt = gt
       else:
         if file.info.kind == PathComponent.pcDir:
-          Dir file(x = parentBox.x, y = y, w = parentBox.w):
+          Dir file(y = y):
             gt = gt
         else:
-          File file(x = parentBox.x, y = y, w = parentBox.w):
+          File file(y = y):
             gt = gt
 
       y += dy
   else:
     for i, disk in expl.disk_list:
       if i == int(expl.item_index):
-        SelectedDisk disk(x = parentBox.x, y = y, w = parentBox.w):
+        SelectedDisk disk(y = y):
           gt = gt
       else:
-        Disk disk(x = parentBox.x, y = y, w = parentBox.w):
+        Disk disk(y = y):
           gt = gt
 
       y += dy

@@ -90,7 +90,7 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
 
   component Folx {.noexport.}:
     if explorer.display:
-      Explorer explorer(wh = window.size.vec2 - vec2(10, 20)):
+      Explorer explorer(right = 10, bottom = 20):
         gt = editor_gt
         bg = colorTheme.bgTextArea
 
@@ -151,14 +151,14 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
 
     else:
       if opened_files.len != 0:
-        TextEditor text_editor(y = 40, h = parentBox.h - 60):
+        TextEditor text_editor(top = 40, bottom = 20):
           gt = editor_gt
           bg = colorTheme.bgTextArea
 
       TitleBar(w = window.size.vec2.x, h = 40):
         gt = interface_gt
 
-      StatusBar(y = window.size.vec2.y - 20, w = window.size.vec2.x, h = 20):
+      StatusBar(top = window.size.vec2.y - 20):
         gt = interface_gt
         bg = colorTheme.bgStatusBar
 

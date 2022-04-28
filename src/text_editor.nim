@@ -243,7 +243,7 @@ component TextEditor:
     lineCount = total
     cursor = editor.cursor
 
-  TextArea(x = line_number_width + 20, w = parentBox.w - line_number_width - 20 - 10):
+  TextArea(left = line_number_width + 20, right = 10):
     gt = gt
     pos = editor.visual_pos
     bg = colorTheme.bgTextArea
@@ -257,7 +257,7 @@ component TextEditor:
       cpos = editor.cursor
       text = editor.text
 
-  ScrollBar(x = parentBox.w - 10, w = 10):
+  ScrollBar(left = parentBox.w - 10):
     pos = editor.visual_pos
     size = size
     total = total + size - 1

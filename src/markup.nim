@@ -36,6 +36,8 @@ proc makeFrame(args: seq[NimNode]): NimNode =
   let
     whs = gensym(nskLet, "wh")
     xys = gensym(nskLet, "xy")
+    lms = gensym(nskLet, "lm")
+    tms = gensym(nskLet, "tm")
   let a = block:
     var r: seq[(string, NimNode)]
     for it in args[0..^2]:
@@ -52,9 +54,63 @@ proc makeFrame(args: seq[NimNode]): NimNode =
   if "wh" in d and ("w" in d or "h" in d): error("duplicated property", d["wh"][1])
   if "xy" in d and ("x" in d or "y" in d): error("duplicated property", d["xy"][1])
   if ("centerIn" in d) and ("xy" in d or "x" in d or "y" in d): error("duplicated property", d["xy"][1])
+  if ("left" in d or "right" in d) and ("xy" in d or "centerIn" in d or "x" in d or "w" in d or "wh" in d):
+    error("can't use both margin and coordinate", (if "left" in d: d["left"] else: d["right"]))
+  if ("top" in d or "bottom" in d) and ("xy" in d or "centerIn" in d or "y" in d or "h" in d or "wh" in d):
+    error("can't use both margin and coordinate", (if "left" in d: d["left"] else: d["right"]))
 
   buildAst: blockStmt empty(), stmtList do:
-    if "wh" in d:
+    if "left" in d or "right" in d or "top" in d or "bottom" in d:
+      letSection:
+        if "left" in d:
+          identDefs:
+            lms
+            empty()
+            call ident"float32", d["left"]
+        if "top" in d:
+          identDefs:
+            tms
+            empty()
+            call ident"float32", d["top"]
+        identDefs:
+          whs
+          empty()
+          call ident"vec2":
+            if "left" in d and "right" in d:
+              infix ident"-":
+                dotExpr(call(bindSym"parentBox"), ident"w")
+                infix ident"+":
+                  lms
+                  call ident"float32", d["right"]
+            elif "left" in d:
+              infix ident"-":
+                dotExpr(call(bindSym"parentBox"), ident"w")
+                lms
+            elif "right" in d:
+              infix ident"-":
+                dotExpr(call(bindSym"parentBox"), ident"w")
+                call ident"float32", d["right"]
+            else:
+              dotExpr(call(bindSym"parentBox"), ident"w")
+
+            if "top" in d and "bottom" in d:
+              infix ident"-":
+                dotExpr(call(bindSym"parentBox"), ident"h")
+                infix ident"+":
+                  tms
+                  call ident"float32", d["bottom"]
+            elif "top" in d:
+              infix ident"-":
+                dotExpr(call(bindSym"parentBox"), ident"h")
+                tms
+            elif "bottom" in d:
+              infix ident"-":
+                dotExpr(call(bindSym"parentBox"), ident"h")
+                call ident"float32", d["bottom"]
+            else:
+              dotExpr(call(bindSym"parentBox"), ident"h")
+
+    elif "wh" in d:
       letSection: identDefs:
         whs
         empty()
@@ -67,7 +123,7 @@ proc makeFrame(args: seq[NimNode]): NimNode =
           call ident"float32":
             if "w" in d: d["w"]
             else:        dotExpr(call(bindSym"parentBox"), ident"w")
-          call ident"float32": 
+          call ident"float32":
             if "h" in d: d["h"]
             else:        dotExpr(call(bindSym"parentBox"), ident"h")
 
@@ -93,11 +149,13 @@ proc makeFrame(args: seq[NimNode]): NimNode =
           empty()
           call ident"vec2":
             call ident"float32": 
-              if "x" in d: d["x"]
-              else:        newLit 0
-            call ident"float32": 
-              if "y" in d: d["y"]
-              else:        newLit 0
+              if "x" in d:    d["x"]
+              elif "left" in d: lms
+              else:           newLit 0
+            call ident"float32":
+              if "y" in d:   d["y"]
+              elif "top" in d: tms
+              else:          newLit 0
 
     call bindSym"frameImpl":
       call bindSym"rect", xys, whs
@@ -144,7 +202,7 @@ macro component*(name, body: untyped) =
         if a.kind in {nnkExprEqExpr, nnkAsgn} and a[0].kind == nnkIdent:
           let s = a[0].strVal
           case s
-          of "w", "h", "wh", "x", "y", "xy", "clip":
+          of "w", "h", "wh", "x", "y", "xy", "clip", "left", "right", "top", "bottom":
             fd.add a
           else:
             if s in d: error("duplicated property", a[0])
