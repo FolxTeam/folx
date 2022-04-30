@@ -23,6 +23,7 @@ type
     current_item_ext*: string
     count_items*: int
     pos*: float32
+    y*: float32
     item_index*: int
     dir*: File
     display*: bool
@@ -51,19 +52,18 @@ proc bySizeDownCmp*(x, y: File): int =
 
 
 proc getIcon(explorer: SideExplorer, file: File): Image =
-  if OpenDir(path: file.path / file.name & file.ext) in explorer.open_dirs:
-    result = iconTheme.openfolder
-  else:
-    result = iconTheme.folder
-
-proc getIcon(file: File): Image =
-  case file.ext
-  of ".nim": result = iconTheme.nim
-  else: 
-    case file.name
-    of ".gitignore": result = iconTheme.gitignore
-    else: result = iconTheme.file
-
+  if file.info.kind == PathComponent.pcFile:
+    case file.ext
+    of ".nim": result = iconTheme.nim
+    else: 
+      case file.name
+      of ".gitignore": result = iconTheme.gitignore
+      else: result = iconTheme.file
+  elif file.info.kind == PathComponent.pcDir:
+    if OpenDir(path: file.path / file.name & file.ext) in explorer.open_dirs:
+      result = iconTheme.openfolder
+    else:
+      result = iconTheme.folder
 
 proc newFiles(file_path: string): seq[File] =
   var info: FileInfo
@@ -113,7 +113,7 @@ proc onButtonDown*(
   
   of KeyLeft:
     if explorer.current_item == PathComponent.pcDir:
-      explorer.open_dirs = explorer.open_dirs.filterIt(it != OpenDir(path: explorer.current_item_path / explorer.current_item_name))
+      explorer.open_dirs = explorer.open_dirs.filterIt(it != OpenDir(path: explorer.current_item_path / explorer.current_item_name & explorer.current_item_ext))
     
   of KeyUp:
     if explorer.item_index > 1:
@@ -138,38 +138,16 @@ proc updateExplorer(explorer: var SideExplorer, file: File) =
   explorer.current_item_name = file.name
   explorer.current_item_ext = file.ext
 
-proc drawDir(
-  r: Context,
-  explorer: var SideExplorer,
-  image: Image,
-  file: File,
-  nesting_indent: string,
-  text: string,
-  gt: var GlyphTable,
-  bg: ColorRgb,
-  y: var float32,
-  icon_const: float32
-  ) =
-
-  let box = parentBox
-  let dy = round(gt.font.size * 1.40)
-
-  image.draw(getIcon(explorer, file), translate(vec2(box.x + 20 + nesting_indent.toRunes.width(gt).float32, y + 4)) * scale(vec2(icon_const * dy, icon_const * dy)))
-  r.image.draw text.toRunes, colorTheme.cActive, vec2(box.x + 40, y), box, gt, bg
-  y += dy
-
-
-proc drawSelectedDir(
-  r: Context,
-  explorer: var SideExplorer,
-  image: Image,
-  file: File,
-  nesting_indent: string,
-  text: string,
-  gt: var GlyphTable,
-  y: var float32,
-  icon_const: float32
-  ) =
+component SelectedItem {.noexport.}:
+  proc handle(
+    explorer: var SideExplorer,
+    file: File,
+    nesting_indent: string,
+    text: string,
+    gt: var GlyphTable,
+    icon_const: float32,
+    count_item: int,
+  )
 
   let box = parentBox
   let dy = round(gt.font.size * 1.40)
@@ -177,91 +155,71 @@ proc drawSelectedDir(
   updateExplorer(explorer, file)
 
   r.fillStyle = colorTheme.bgSelection
-  r.fillRect rect(vec2(0,y), vec2(box.w, dy))
+  r.fillRect rect(vec2(0, explorer.y), vec2(box.w, dy))
 
   r.fillStyle = colorTheme.bgSelectionLabel
-  r.fillRect rect(vec2(0,y), vec2(2, dy))
-  
-  image.draw(getIcon(explorer, file), translate(vec2(box.x + 20 + nesting_indent.toRunes.width(gt).float32, y + 4)) * scale(vec2(icon_const * dy, icon_const * dy)))
+  r.fillRect rect(vec2(0, explorer.y), vec2(2, dy))
 
-  r.image.draw text.toRunes, colorTheme.cActive, vec2(box.x + 40, y), box, gt, colorTheme.bgSelection
-  y += dy
+  image.draw(getIcon(explorer, file), translate(vec2(box.x + 20 + nesting_indent.toRunes.width(gt).float32, explorer.y + 4)) * scale(vec2(icon_const * dy, icon_const * dy)))
 
+  image.draw text.toRunes, colorTheme.cActive, vec2(box.x + 40, explorer.y), box, gt, colorTheme.bgSelection
+  explorer.y += dy
 
-proc drawFile(
-  r: Context,
-  image: Image,
-  file: File,
-  nesting_indent: string,
-  text: string,
-  gt: var GlyphTable,
-  bg: ColorRgb,
-  y: var float32,
-  icon_const: float32
-  ) =
+component Item {.noexport.}:
+  proc handle(
+    explorer: var SideExplorer,
+    file: File,
+    nesting_indent: string,
+    text: string,
+    gt: var GlyphTable,
+    icon_const: float32,
+    count_item: int,
+  )
 
   let box = parentBox
   let dy = round(gt.font.size * 1.40)
 
-  image.draw(getIcon(file), translate(vec2(box.x + 20 + nesting_indent.toRunes.width(gt).float32, y + 4)) * scale(vec2(icon_const * dy, icon_const * dy)))
+  image.draw(getIcon(explorer, file), translate(vec2(box.x + 20 + nesting_indent.toRunes.width(gt).float32, explorer.y + 4)) * scale(vec2(icon_const * dy, icon_const * dy)))
 
-  r.image.draw text.toRunes, colorTheme.cActive, vec2(box.x + 40, y), box, gt, bg
-  y += dy
+  image.draw text.toRunes, colorTheme.cActive, vec2(box.x + 40, explorer.y), box, gt, colorTheme.bgExplorer
+  explorer.y += dy
     
 
-proc drawSelectedFile(
-  r: Context,
-  explorer: var SideExplorer,
-  image: Image,
-  file: File,
-  nesting_indent: string,
-  text: string,
-  gt: var GlyphTable,
-  y: var float32,
-  icon_const: float32
-  ) =
+component SideExplorer:
+  proc handle(
+    main_explorer: var SideExplorer,
+    gt: var GlyphTable,
+    dir: File,
+    nesting: int32 = 0,
+  )
 
-  let box = parentBox
-  let dy = round(gt.font.size * 1.40)
-
-  updateExplorer(explorer, file)
-
-  r.fillStyle = colorTheme.bgSelection
-  r.fillRect rect(vec2(0,y), vec2(box.w, dy))
-
-  r.fillStyle = colorTheme.bgSelectionLabel
-  r.fillRect rect(vec2(0,y), vec2(2, dy))
-
-  image.draw(getIcon(file), translate(vec2(box.x + 20 + nesting_indent.toRunes.width(gt).float32, y + 4)) * scale(vec2(icon_const * dy, icon_const * dy)))
-
-  r.image.draw text.toRunes, colorTheme.cActive, vec2(box.x + 40, y), box, gt, colorTheme.bgSelection
-  y += dy
-
-
-proc side_explorer_area*(
-  r: Context,
-  image: Image,
-  pos: float32,
-  gt: var GlyphTable,
-  bg: ColorRgb,
-  dir: File,
-  explorer: var SideExplorer,
-  count_items: int32,
-  y: float32,
-  nesting: int32,
-  ) : (float32, int32) {.discardable.} =
-
-
-  let 
-    dy = round(gt.font.size * 1.40)
-    icon_const = 0.06
-    box = parentBox
-  var 
-    y = y
-    dir = dir
-    count_items = count_items
-    size = (box.h / gt.font.size).ceil.int
   
+  var box = parentBox
+  var dy = round(gt.font.size * 1.40)
+  let
+    icon_const = 0.06
+  var
+    dir = dir
+    size = (box.h / gt.font.size).ceil.int
+    count_items = main_explorer.count_items
+    pos = main_explorer.pos
+
+  if nesting == 0:
+    main_explorer.y = 40
+    count_items = 0
+    main_explorer.count_items = 0
+    
+    var middle_x = box.x + ( ( box.w - "Explorer".toRunes.width(gt).float32 ) / 2 )
+
+    r.fillStyle = colorTheme.bgExplorer
+    r.fillRect box
+
+    r.image.draw "Explorer".toRunes, colorTheme.cActive, vec2(middle_x.float32, main_explorer.y), box, gt, configuration.colorTheme.bgExplorer
+    main_explorer.y += dy
+
+    r.image.draw toRunes(main_explorer.dir.path), colorTheme.cInActive, vec2(box.x, main_explorer.y), box, gt, configuration.colorTheme.bgExplorer
+    main_explorer.y += dy
+
   # ! sorted on each component rerender | check if seq already sorted or take the sort to updateDir
 
   var dir_files: seq[File] = @[]
@@ -279,44 +237,43 @@ proc side_explorer_area*(
   
   for i, file in dir.files.pairs:
 
-    let nesting_indent = " ".repeat(nesting * 2)
-    let text = nesting_indent & file.name & file.ext
-    
     inc count_items
 
-    case file.info.kind
-    of PathComponent.pcFile:
-      if count_items in pos.int..pos.ceil.int+size:
-        if count_items == int(explorer.item_index):
-          r.drawSelectedFile(explorer, image, file, nesting_indent, text, gt, y, icon_const)
-        else:
-          r.drawFile(image, file, nesting_indent, text, gt, bg, y, icon_const)
+    let nesting_indent = " ".repeat(nesting * 2)
+    let text = nesting_indent & file.name & file.ext
 
-    of PathComponent.pcDir:
-      if count_items in pos.int..pos.ceil.int+size:
-        if count_items == int(explorer.item_index):
-          r.drawSelectedDir(explorer, image, file, nesting_indent, text, gt, y, icon_const)
-        else:
-          r.drawDir(explorer, image, file, nesting_indent, text, gt, bg, y, icon_const)
-      
-      if OpenDir(path: file.path / file.name & file.ext) in explorer.open_dirs:
+    if count_items in pos.int..pos.ceil.int+size:
+      if count_items == int(main_explorer.item_index):
+        SelectedItem():
+          explorer = main_explorer
+          file = file
+          nesting_indent = nesting_indent
+          text = text
+          gt = gt
+          icon_const = icon_const
+          count_item = count_items
+      else:
+        Item():
+          explorer = main_explorer
+          file = file
+          nesting_indent = nesting_indent
+          text = text
+          gt = gt
+          icon_const = icon_const
+          count_item = count_items
+    
+    if file.info.kind == PathComponent.pcDir:
+      if OpenDir(path: file.path / file.name & file.ext) in main_explorer.open_dirs:
 
         dir.files[i].files = newFiles(file.path / file.name & file.ext)
 
-        (y, count_items) = r.side_explorer_area(
-          image = image,
-          pos = pos,
-          gt = gt,
-          bg = bg,
-          dir = dir.files[i],
-          explorer = explorer,
-          count_items = count_items,
-          y = y,
-          nesting = nesting + 1
-        )
+        main_explorer.count_items = count_items
 
-    else:
-      discard
+        SideExplorer main_explorer(x = parentBox.x, y = parentBox.y, w = parentBox.w, h = parentBox.h):
+          gt = gt
+          dir = dir.files[i]
+          nesting = nesting + 1
         
-  explorer.count_items = count_items
-  return (y, count_items)
+        count_items = main_explorer.count_items
+
+  main_explorer.count_items = count_items

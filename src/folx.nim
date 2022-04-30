@@ -48,7 +48,7 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
     # for explorer
     pos = 0.0'f32
 
-  var main_explorer = SideExplorer(current_dir: workspace, item_index: 1, display: false, pos: 0)
+  var main_explorer = SideExplorer(current_dir: workspace, item_index: 1, display: false, pos: 0, y: 40, count_items: 0)
   var explorer = Explorer(display_disk_list: false, current_dir: "", item_index: 0, files: @[], display: false, pos: 0)
 
   proc open_file(file: string) =
@@ -95,38 +95,15 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
         bg = colorTheme.bgTextArea
 
     elif main_explorer.display:
-      frame(x = 0, y = 40, w = 260, h = window.size.vec2.y - 60):
-        var box = parentBox
-        var dy = round(editor_gt.font.size * 1.27)
-        var y = box.y - dy * (pos mod 1)
-        var middle_x = box.x + ( ( box.w - "Explorer".toRunes.width(editor_gt).float32 ) / 2 )
+      SideExplorer main_explorer(x = 0, y = 0, w = 260, h = window.size.vec2.y - 60):
+        gt = editor_gt
+        dir = main_explorer.dir
 
-        r.fillStyle = colorTheme.bgExplorer
-        r.fillRect box
-
-        r.image.draw "Explorer".toRunes, colorTheme.cActive, vec2(middle_x.float32, y), box, editor_gt, configuration.colorTheme.bgExplorer
-        y += dy
-
-        r.image.draw toRunes(main_explorer.dir.path), colorTheme.cInActive, vec2(box.x, y), box, editor_gt, configuration.colorTheme.bgExplorer
-        y += dy
-
-        r.side_explorer_area(
-          image = image,
-          pos = main_explorer.pos,
-          gt = editor_gt,
-          bg = configuration.colorTheme.bgExplorer,
-          dir = main_explorer.dir,
-          explorer = main_explorer,
-          count_items = 0,
-          y = y,
-          nesting = 0,
-        )
-
-        if opened_files.len != 0:
-          TextEditor text_editor(x = parentBox.w, y = 0, w = window.size.vec2.x - parentBox.w, h = window.size.vec2.y - 60):
-            gt = editor_gt
-            bg = colorTheme.bgTextArea
-
+      if opened_files.len != 0:
+        TextEditor text_editor(x = 260, y = 40, w = window.size.vec2.x - 260, h = window.size.vec2.y - 60):
+          gt = editor_gt
+          bg = colorTheme.bgTextArea
+          
       TitleBar(w = window.size.vec2.x, h = 40):
         gt = interface_gt
 
