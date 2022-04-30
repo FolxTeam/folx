@@ -183,11 +183,30 @@ component Item {.noexport.}:
 
   image.draw text.toRunes, colorTheme.cActive, vec2(box.x + 40, explorer.y), box, gt, colorTheme.bgExplorer
   explorer.y += dy
-    
+
+component Title {.noexport.}:
+  proc handle(
+    explorer: var SideExplorer,
+    gt: var GlyphTable,
+  )
+
+  let box = parentBox
+  let dy = round(gt.font.size * 1.40)
+
+  var middle_x = box.x + ( ( box.w - "Explorer".toRunes.width(gt).float32 ) / 2 )
+
+  r.fillStyle = colorTheme.bgExplorer
+  r.fillRect box
+
+  r.image.draw "Explorer".toRunes, colorTheme.cActive, vec2(middle_x.float32, explorer.y), box, gt, configuration.colorTheme.bgExplorer
+  explorer.y += dy
+
+  r.image.draw toRunes(explorer.dir.path), colorTheme.cInActive, vec2(box.x, explorer.y), box, gt, configuration.colorTheme.bgExplorer
+  explorer.y += dy
 
 component SideExplorer:
   proc handle(
-    main_explorer: var SideExplorer,
+    explorer: var SideExplorer,
     gt: var GlyphTable,
     dir: File,
     nesting: int32 = 0,
@@ -201,24 +220,19 @@ component SideExplorer:
   var
     dir = dir
     size = (box.h / gt.font.size).ceil.int
-    count_items = main_explorer.count_items
-    pos = main_explorer.pos
+    count_items = explorer.count_items
+    pos = explorer.pos
 
   if nesting == 0:
-    main_explorer.y = 40
+    explorer.y = 40
     count_items = 0
-    main_explorer.count_items = 0
+    explorer.count_items = 0
     
-    var middle_x = box.x + ( ( box.w - "Explorer".toRunes.width(gt).float32 ) / 2 )
+    Title():
+      explorer = explorer
+      gt = gt
 
-    r.fillStyle = colorTheme.bgExplorer
-    r.fillRect box
-
-    r.image.draw "Explorer".toRunes, colorTheme.cActive, vec2(middle_x.float32, main_explorer.y), box, gt, configuration.colorTheme.bgExplorer
-    main_explorer.y += dy
-
-    r.image.draw toRunes(main_explorer.dir.path), colorTheme.cInActive, vec2(box.x, main_explorer.y), box, gt, configuration.colorTheme.bgExplorer
-    main_explorer.y += dy
+    
 
   # ! sorted on each component rerender | check if seq already sorted or take the sort to updateDir
 
@@ -243,9 +257,9 @@ component SideExplorer:
     let text = nesting_indent & file.name & file.ext
 
     if count_items in pos.int..pos.ceil.int+size:
-      if count_items == int(main_explorer.item_index):
+      if count_items == int(explorer.item_index):
         SelectedItem():
-          explorer = main_explorer
+          explorer = explorer
           file = file
           nesting_indent = nesting_indent
           text = text
@@ -254,7 +268,7 @@ component SideExplorer:
           count_item = count_items
       else:
         Item():
-          explorer = main_explorer
+          explorer = explorer
           file = file
           nesting_indent = nesting_indent
           text = text
@@ -263,17 +277,17 @@ component SideExplorer:
           count_item = count_items
     
     if file.info.kind == PathComponent.pcDir:
-      if OpenDir(path: file.path / file.name & file.ext) in main_explorer.open_dirs:
+      if OpenDir(path: file.path / file.name & file.ext) in explorer.open_dirs:
 
         dir.files[i].files = newFiles(file.path / file.name & file.ext)
 
-        main_explorer.count_items = count_items
+        explorer.count_items = count_items
 
-        SideExplorer main_explorer(x = parentBox.x, y = parentBox.y, w = parentBox.w, h = parentBox.h):
+        SideExplorer explorer(x = parentBox.x, y = parentBox.y, w = parentBox.w, h = parentBox.h):
           gt = gt
           dir = dir.files[i]
           nesting = nesting + 1
         
-        count_items = main_explorer.count_items
+        count_items = explorer.count_items
 
-  main_explorer.count_items = count_items
+  explorer.count_items = count_items

@@ -48,7 +48,7 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
     # for explorer
     pos = 0.0'f32
 
-  var main_explorer = SideExplorer(current_dir: workspace, item_index: 1, display: false, pos: 0, y: 40, count_items: 0)
+  var side_explorer = SideExplorer(current_dir: workspace, item_index: 1, display: false, pos: 0, y: 40, count_items: 0)
   var explorer = Explorer(display_disk_list: false, current_dir: "", item_index: 0, files: @[], display: false, pos: 0)
 
   proc open_file(file: string) =
@@ -61,25 +61,25 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
 
   proc animate(dt: float32): bool =
     # todo: refactor repeat code
-    if main_explorer.display:
-      if pos != main_explorer.pos:
+    if side_explorer.display:
+      if pos != side_explorer.pos:
         let
           fontSize = editor_gt.font.size
-          pvp = (main_explorer.pos * fontSize).round.int32  # visual position in pixels
+          pvp = (side_explorer.pos * fontSize).round.int32  # visual position in pixels
           
           # position delta
-          d = (abs(pos - main_explorer.pos) * pow(1 / 2, (1 / dt) / 50)).max(0.1).min(abs(pos - main_explorer.pos))
+          d = (abs(pos - side_explorer.pos) * pow(1 / 2, (1 / dt) / 50)).max(0.1).min(abs(pos - side_explorer.pos))
 
         # move position by delta
-        if pos > main_explorer.pos: main_explorer.pos += d
-        else:                main_explorer.pos -= d
+        if pos > side_explorer.pos: side_explorer.pos += d
+        else:                side_explorer.pos -= d
 
         # if position close to integer number, round it
-        if abs(main_explorer.pos - pos) < 1 / fontSize / 2.1:
-          main_explorer.pos = pos
+        if abs(side_explorer.pos - pos) < 1 / fontSize / 2.1:
+          side_explorer.pos = pos
         
         # if position changed, signal to display by setting result to true
-        if pvp != (main_explorer.pos * fontSize).round.int32: result = true
+        if pvp != (side_explorer.pos * fontSize).round.int32: result = true
     
     if opened_files.len != 0:
       result = result or text_editor.animate(
@@ -94,10 +94,10 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
         gt = editor_gt
         bg = colorTheme.bgTextArea
 
-    elif main_explorer.display:
-      SideExplorer main_explorer(x = 0, y = 0, w = 260, h = window.size.vec2.y - 60):
+    elif side_explorer.display:
+      SideExplorer side_explorer(x = 0, y = 0, w = 260, h = window.size.vec2.y - 60):
         gt = editor_gt
-        dir = main_explorer.dir
+        dir = side_explorer.dir
 
       if opened_files.len != 0:
         TextEditor text_editor(x = 260, y = 40, w = window.size.vec2.x - 260, h = window.size.vec2.y - 60):
@@ -112,15 +112,15 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
         bg = colorTheme.bgStatusBar
 
         fieldsStart = @[
-          ("Items: ", $main_explorer.count_items),
-          ("Item: ", $main_explorer.item_index),
+          ("Items: ", $side_explorer.count_items),
+          ("Item: ", $side_explorer.item_index),
         ]
 
         fieldsEnd = @[
           ("", ""),
         ] & (
-          if main_explorer.current_dir.gitBranch.isSome: @[
-            ("git: ", main_explorer.current_dir.gitBranch.get),
+          if side_explorer.current_dir.gitBranch.isSome: @[
+            ("git: ", side_explorer.current_dir.gitBranch.get),
           ] else: @[]
         ) & @[
           ("", if opened_files.len > 0: getFileExt(opened_files[0]) else: getFileExt(""))
@@ -147,8 +147,8 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
         fieldsEnd = @[
           ("", ""),
         ] & (
-          if main_explorer.current_dir.gitBranch.isSome: @[
-            ("git: ", main_explorer.current_dir.gitBranch.get),
+          if side_explorer.current_dir.gitBranch.isSome: @[
+            ("git: ", side_explorer.current_dir.gitBranch.get),
           ] else: @[]
         ) & @[
           ("", if opened_files.len > 0: getFileExt(opened_files[0]) else: getFileExt(""))
@@ -183,9 +183,9 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
       displayRequest = true
 
     else:
-      if main_explorer.display:
+      if side_explorer.display:
         if window.mousePos in rect(vec2(0, 0), vec2(260, window.size.vec2.y)):
-          let lines_count = main_explorer.count_items.float32
+          let lines_count = side_explorer.count_items.float32
           pos = (pos - window.scrollDelta.y * 3).max(0).min(lines_count)
         
         elif opened_files.len != 0:
@@ -208,21 +208,21 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
   window.onButtonPress = proc(button: Button) =
     if window.buttonDown[KeyLeftControl] and button == KeyE:
       explorer.display = false
-      main_explorer.display = not main_explorer.display
+      side_explorer.display = not side_explorer.display
       
-      if main_explorer.display:
-        pos = main_explorer.pos
-        main_explorer.updateDir config.file
+      if side_explorer.display:
+        pos = side_explorer.pos
+        side_explorer.updateDir config.file
 
     elif window.buttonDown[KeyLeftControl] and button == KeyO:
-      main_explorer.display = false
+      side_explorer.display = false
       explorer.display = not explorer.display
       
       if explorer.display:
         explorer.updateDir config.file
     
     elif window.buttonDown[KeyLeftControl] and button == KeyV:
-      if not main_explorer.display and opened_files.len != 0:
+      if not side_explorer.display and opened_files.len != 0:
         text_editor.onPaste(
           text = newText(getClipboardString()),
           onTextChange = (proc =
@@ -230,8 +230,8 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
           )
         )
 
-    elif main_explorer.display:
-      main_explorer.onButtonDown(
+    elif side_explorer.display:
+      side_explorer.onButtonDown(
         button = button,
         path = config.file,
         onFileOpen = (proc(file: string) =
@@ -245,11 +245,11 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
         path = config.file,
         window = window,
         onWorkspaceOpen = (proc(path: string) =
-          main_explorer.current_dir = path
+          side_explorer.current_dir = path
           config.workspace = path
           writeConfig()
-          main_explorer.item_index = 1
-          main_explorer.pos = 0.0
+          side_explorer.item_index = 1
+          side_explorer.pos = 0.0
           explorer.display = false
         ),
       )
@@ -271,7 +271,7 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
   window.onRune = proc(rune: Rune) =
     if window.buttonDown[KeyLeftSuper] or window.buttonDown[KeyRightSuper]: return
 
-    if not main_explorer.display and opened_files.len != 0:
+    if not side_explorer.display and opened_files.len != 0:
       text_editor.onRuneInput(
         rune = rune,
         onTextChange = (proc =
