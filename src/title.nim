@@ -1,5 +1,6 @@
 import pixwindy, pixie
 import render, configuration, markup
+import explorer, side_explorer
 
 type 
   Title* = object
@@ -28,11 +29,14 @@ proc onMouseMove*(
         window.pos = ivec2(window.pos.x + newPosition.x, window.pos.y + newPosition.y)
     else:
       oldPosition = ivec2(0,0)
-
+  
 proc onButtonDown*(
   title: var Title,
   button: Button,
   window: Window,
+  explorer: var Explorer,
+  side_explorer: var SideExplorer,
+  pos: var float32
   ) =
 
   case button
@@ -49,6 +53,16 @@ proc onButtonDown*(
       if window.mousePos.x >= window.size.x - 150 and window.mousePos.x < window.size.x - 100 and
         window.mousePos.y >= 0 and window.mousePos.y <= 40:
         window.minimized = not window.minimized
+
+      if window.mousePos.x >= 0 and window.mousePos.x < 65 and
+        window.mousePos.y >= 0 and window.mousePos.y <= 40:
+
+        explorer.display = false
+        side_explorer.display = not side_explorer.display
+        
+        if side_explorer.display:
+          pos = side_explorer.pos
+          side_explorer.updateDir config.file
 
   else: discard
 

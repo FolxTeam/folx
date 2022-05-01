@@ -277,6 +277,9 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
     title.onButtonDown(
       button = button, 
       window = window,
+      explorer = explorer,
+      side_explorer = side_explorer,
+      pos = pos,
     )
 
     display()
