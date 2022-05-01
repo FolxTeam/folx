@@ -1,60 +1,43 @@
 import pixwindy, pixie
-import render, configuration, markup
-
-component Name {.noexport.}:
-  proc handle(
-    gt: var GlyphTable,
-  )
-
-  let 
-    box = parentBox
-    dy = round(gt.font.size * 1.27)
-
-  image.draw ("folx").toRunes, colorTheme.cMiddle, vec2(box.x, box.y), box, gt, colorTheme.bgTextArea
+import render, configuration
 
 component Item {.noexport.}:
   proc handle(
-    gt: var GlyphTable,
     label: string,
     hotkey: string,
   )
 
-  let 
-    box = parentBox
-    dy = round(gt.font.size * 1.27)
+  Text label:
+    color = colorTheme.cMiddle
+    bg = colorTheme.bgTextArea
 
-  image.draw (label).toRunes, colorTheme.cMiddle, vec2(box.x, box.y), box, gt, colorTheme.bgTextArea
+  Rect(x = label.width(glyphTableStack[^1]) + 8, y = -2, w = hotkey.width(glyphTableStack[^1]) + 14, h = parentBox.h + 4):
+    color = colorTheme.cMiddle
+    radius = 5
 
-  r.fillStyle = colorTheme.cMiddle
-  r.fillRoundedRect rect(vec2(box.x + 265, box.y - 2), vec2(130, 40)), 10.0
+    Rect(left = 2, top = 2, right = 2, bottom = 2):
+      color = colorTheme.bgTextArea
+      radius = 5
 
-  r.fillStyle = colorTheme.bgTextArea
-  r.fillRoundedRect rect(vec2(box.x + 267, box.y), vec2(126, 36)), 10.0
-
-  image.draw (hotkey).toRunes, colorTheme.cMiddle, vec2(box.x + 280, box.y), box, gt, colorTheme.bgTextArea
+      Text hotkey(left = 5, top = 1, right = 5, bottom = 1):
+        color = colorTheme.cMiddle
+        bg = colorTheme.bgTextArea
 
 
 component Welcome:
-  proc handle(
-    gt: var GlyphTable,
-  )
+  proc handle()
 
-  let box = parentBox
+  let fsize = glyphTableStack[^1].font.size + 4
 
-  gt.font.size = gt.font.size * 2.5
+  Frame(verticalCenterIn = parentBox, h = fsize * 3 + 20):
+    Text "folx"(horisontalCenterIn = parentBox, w = "folx".width(glyphTableStack[^1]), h = fsize):
+      color = colorTheme.cMiddle
+      bg = colorTheme.bgTextArea
 
-  Name(x = (box.w - 400) / 2, y = 200, w = 400, h = 50):
-    gt = gt
+    Item(horisontalCenterIn = parentBox, y = fsize + 10, w = "Open Folder".width(glyphTableStack[^1]) + "Ctrl+O".width(glyphTableStack[^1]) + 20, h = fsize):
+      label = "Open Folder"
+      hotkey = "Ctrl+O"
 
-  Item(x = (box.w - 400) / 2, y = 300, w = 400, h = 50):
-    gt = gt
-    label = "Open Folder"
-    hotkey = "Ctrl+O"
-
-  Item(x = (box.w - 400) / 2, y = 400, w = 400, h = 50):
-    gt = gt
-    label = "Open Explorer"
-    hotkey = "Ctrl+E"
-
-  gt.font.size = gt.font.size / 2.5
-
+    Item(horisontalCenterIn = parentBox, y = fsize * 2 + 20, w = "Open Explorer".width(glyphTableStack[^1]) + "Ctrl+E".width(glyphTableStack[^1]) + 20, h = fsize):
+      label = "Open Explorer"
+      hotkey = "Ctrl+E"

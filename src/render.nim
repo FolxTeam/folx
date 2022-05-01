@@ -1,11 +1,28 @@
 import tables, unicode, sequtils
-import pixie
+import pixie, markup
+export markup
 
 type
-  GlyphTable* = object
+  GlyphTable* = ref object
     ## table of pre-renered text images
     font*: Font
     glyphs: Table[tuple[c: Rune; fg, bg: ColorRgb], Image]
+
+
+var
+  contextStack*: seq[Context]
+  glyphTableStack*: seq[GlyphTable]
+
+
+template withGlyphTable*(x: GlyphTable, body) =
+  glyphTableStack.add x
+  block: body
+  glyphTableStack.del glyphTableStack.high
+
+template withContext*(x: Context, body) =
+  contextStack.add x
+  block: body
+  contextStack.del contextStack.high
 
 
 proc newGlyphTable*(font: Font, fontSize: float32): GlyphTable =
@@ -28,15 +45,23 @@ proc bound*(a, b: Rect): Rect =
 
 {.push, checks: off.}
 
-func draw*(r: Image, g: Image, pos: IVec2, size: IVec2, srcPos: IVec2) =
-  ## draw image (fast)
+component Image:
+  # image (unscaled)
+  proc handle(
+    g: Image,
+    srcPos: IVec2 = ivec2(0, 0),
+  )
+  let
+    pos1 = parentBox.xy.ivec2
+    size1 = parentBox.wh.ivec2
+    r = contextStack[^1].image
 
   # clip
-  let pos2 = ivec2(max(-pos.x, 0), max(-pos.y, 0)) + srcPos
-  let pos = pos + pos2
+  let pos2 = ivec2(max(-pos1.x, 0), max(-pos1.y, 0)) + srcPos
+  let pos = pos1 + pos2
   let size = ivec2(
-    (size.x - srcPos.x).min(g.width.int32 - pos2.x).min(r.width.int32 - pos.x),
-    (size.y - srcPos.y).min(g.height.int32 - pos2.y).min(r.height.int32 - pos.y)
+    (size1.x - srcPos.x).min(g.width.int32 - pos2.x).min(r.width.int32 - pos.x),
+    (size1.y - srcPos.y).min(g.height.int32 - pos2.y).min(r.height.int32 - pos.y)
   )
   if size.x <= 0 or size.y <= 0: return
 
@@ -50,15 +75,27 @@ func draw*(r: Image, g: Image, pos: IVec2, size: IVec2, srcPos: IVec2) =
       inc isrc
       inc idst
 
-proc vertical_line*(r: Image; x, y, h: int32, box: Rect, color: ColorRgb) =
-  ## draw vertical line (fast)
-  let (bx, by, bw, bh) = (box.x.round.int32, box.y.round.int32, box.w.round.int32, box.h.round.int32)
-  let x = x.min(bx + bw).min(r.width).max(bx).max(0)
+
+component VerticalLine:
+  # draw vertical line (fast)
+  proc handle(
+    color: ColorRgb
+  )
+  let
+    pbox = parentBox
+    r = contextStack[^1].image
+    y = pbox.y.int32
+    h = pbox.h.int32
+    box = clipStack[^1]
+    (bx, by, bw, bh) = (box.x.round.int32, box.y.round.int32, box.w.round.int32, box.h.round.int32)
+    x = pbox.x.int32.min(bx + bw).min(r.width).max(bx).max(0)
+  
   for i in countup(
     y.min(by + bh).min(r.height - 1).max(by).max(0) * r.width + x,
     ((y + h).min(by + bh).min(r.height).max(by).max(0) - 1) * r.width + x, r.width
   ):
     r.data[i] = rgbx(color.r, color.g, color.b, 255)
+
 
 proc clear*(image: Image, color: ColorRgbx) =
   ## fill image (fast)
@@ -94,7 +131,7 @@ proc render(c: Rune, font: Font; fg, bg: ColorRgb): Image =
   font.paint.color = fg.color
   result.fillText(ts)
 
-proc render(gt: var GlyphTable, c: Rune; fg, bg: ColorRgb) =
+proc render(gt: GlyphTable, c: Rune; fg, bg: ColorRgb) =
   ## pre-rener text and save it in table
   let img = c.render(gt.font, fg, bg)
   if img == nil:
@@ -102,10 +139,10 @@ proc render(gt: var GlyphTable, c: Rune; fg, bg: ColorRgb) =
   else:
     gt.glyphs[(c, fg, bg)] = img
 
-func clear*(gt: var GlyphTable) =
+func clear*(gt: GlyphTable) =
   clear gt.glyphs
 
-proc `[]`(gt: var GlyphTable, c: Rune; fg, bg: ColorRgb): Image =
+proc `[]`(gt: GlyphTable, c: Rune; fg, bg: ColorRgb): Image =
   const space = " ".runeAt(0)
 
   result =
@@ -122,13 +159,34 @@ proc `[]`(gt: var GlyphTable, c: Rune; fg, bg: ColorRgb): Image =
         gt.glyphs[(space, fg, bg)]
 
 
-proc draw*(r: Image, text: openarray[Rune], colors: openarray[ColorRgb], pos: Vec2, box: Rect, gt: var GlyphTable, bg: ColorRgb) =
-  ## draw colored text
-  assert text.len == colors.len
+proc width*(text: openarray[Rune], gt: GlyphTable): int32 =
+  ## get width of text in pixels for font, specified in gt
+  gt.font.layoutBounds($text).x.int32
 
-  var (x, y, w, h) = (pos.x.round.int32, pos.y.round.int32, (box.w - pos.x + box.x).round.int32, (box.h - pos.y + box.y).round.int32)
+proc width*(text: string, gt: GlyphTable): int32 =
+  ## get width of text in pixels for font, specified in gt
+  gt.font.layoutBounds(text).x.int32
+
+
+component Text:
+  # colored text
+  proc handle(
+    text: openarray[Rune],
+    colors: openarray[ColorRgb],
+    bg: ColorRgb,
+  )
+  let gt = glyphTableStack[^1]
+  auto w: gt.font.layoutBounds($text).x
+  auto h: gt.font.layoutBounds($text).y
+  auto wh: gt.font.layoutBounds($text)
+
+  assert text.len == colors.len
+  let
+    box = clipStack[^1]
+
+  var (x, y, w, h) = (0'i32, 0'i32, (box.w - parentBox.x + box.x).round.int32, (box.h - parentBox.y + box.y).round.int32)
   # todo: clip x (from start)
-  let hd = max(box.y - pos.y, 0).round.int32
+  let hd = max(box.y - parentBox.y, 0).round.int32
 
   for i, c in text:
     let color = colors[i]
@@ -139,7 +197,8 @@ proc draw*(r: Image, text: openarray[Rune], colors: openarray[ColorRgb], pos: Ve
       continue
 
     if not c.isWhiteSpace:
-      r.draw glyph, ivec2(x, y), ivec2(w, h), ivec2(0, hd)
+      Image glyph(x=x, y=y, w=w, h=h):
+        srcPos = ivec2(0, hd)
 
     let bx = glyph.width.int32
     x += bx
@@ -147,18 +206,73 @@ proc draw*(r: Image, text: openarray[Rune], colors: openarray[ColorRgb], pos: Ve
     if w <= 0: return
 
 
-proc draw*(r: Image, text: openarray[Rune], color: ColorRgb, pos: Vec2, box: Rect, gt: var GlyphTable, bg: ColorRgb) =
-  r.draw text, color.repeat(text.len), pos, box, gt, bg
-
-
-proc width*(text: openarray[Rune], gt: var GlyphTable): int32 =
-  ## get width of text in pixels for font, specified in gt
-  const black = rgb(0, 0, 0) 
+component Text:
+  # colored text
+  proc handle(
+    text: string,
+    colors: openarray[ColorRgb],
+    bg: ColorRgb,
+  )
+  auto w: glyphTableStack[^1].font.layoutBounds(text).x
+  auto h: glyphTableStack[^1].font.layoutBounds(text).y
+  auto wh: glyphTableStack[^1].font.layoutBounds(text)
   
-  for c in text:
-    let glyph = gt[c, black, black]
-    
-    if glyph == nil:
-      continue
+  Text text.toRunes:
+    colors = colors
+    bg = bg
 
-    result += glyph.width.int32
+
+component Text:
+  # colored text
+  proc handle(
+    text: openarray[Rune],
+    color: ColorRgb,
+    bg: ColorRgb,
+  )
+  auto w: glyphTableStack[^1].font.layoutBounds($text).x
+  auto h: glyphTableStack[^1].font.layoutBounds($text).y
+  auto wh: glyphTableStack[^1].font.layoutBounds($text)
+  
+  Text text:
+    colors = color.repeat(text.len)
+    bg = bg
+
+
+component Text:
+  # colored text
+  proc handle(
+    text: string,
+    color: ColorRgb,
+    bg: ColorRgb,
+  )
+  auto w: glyphTableStack[^1].font.layoutBounds(text).x
+  auto h: glyphTableStack[^1].font.layoutBounds(text).y
+  auto wh: glyphTableStack[^1].font.layoutBounds(text)
+  
+  Text text:
+    colors = color.repeat(text.runeLen)
+    bg = bg
+
+
+component Frame:
+  discard
+
+component Rect:
+  proc handle(
+    color: SomeColor,
+  )
+
+  let r = contextStack[^1]
+  r.fillStyle = color
+  r.fillRect parentBox
+
+component Rect:
+  # rounded rect
+  proc handle(
+    color: SomeColor,
+    radius: SomeNumber,
+  )
+
+  let r = contextStack[^1]
+  r.fillStyle = color
+  r.fillRoundedRect parentBox, radius.float32

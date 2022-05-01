@@ -1,5 +1,5 @@
-import std/options, os, std/unicode, math
-import pixwindy, pixie, std/algorithm, times
+import options, os, math, algorithm, times
+import pixwindy, pixie
 import render, configuration, markup
 
 when defined(windows):
@@ -171,95 +171,60 @@ proc onButtonDown*(
 component Disk {.noexport.}:
   proc handle(
     disk: string,
-    gt: var GlyphTable,
+    selected: bool,
+    bg: ColorRgb,
   )
-
-  let box = parentBox
-  let dy = round(gt.font.size * 1.27)
-
-  image.draw (disk).toRunes, colorTheme.cActive, vec2(box.x + 10, box.y), box, gt, colorTheme.bgSelection
-
-component SelectedDisk {.noexport.}:
-  proc handle(
-    disk: string,
-    gt: var GlyphTable,
-  )
-
-  let box = parentBox
-  let dy = round(gt.font.size * 1.27)
-
-  r.fillStyle = colorTheme.bgSelection
-  r.fillRect rect(vec2(0, box.y), vec2(box.w, dy))
-
-  r.fillStyle = colorTheme.bgSelectionLabel
-  r.fillRect rect(vec2(0, box.y), vec2(2, dy))
-
-  image.draw (disk).toRunes, colorTheme.cActive, vec2(box.x + 10, box.y), box, gt, colorTheme.bgSelection
-
-component SelectedItem {.noexport.}:
-  proc handle(
-    file: File,
-    gt: var GlyphTable,
-  )
-
-  let box = parentBox
-  let dy = round(gt.font.size * 1.27)
-
-  r.fillStyle = colorTheme.bgSelection
-  r.fillRect rect(vec2(0,box.y), vec2(box.w, dy))
-
-  r.fillStyle = colorTheme.bgSelectionLabel
-  r.fillRect rect(vec2(0,box.y), vec2(2, dy))
   
-  image.draw(getIcon(file), translate(vec2(box.x + 20, box.y + 4)) * scale(vec2(0.06 * dy, 0.06 * dy)))
+  if selected:
+    Rect: color = colorTheme.bgSelection
+    Rect(w = 2): color = colorTheme.bgSelectionLabel
 
-  image.draw (file.name & file.ext).toRunes, colorTheme.cActive, vec2(box.x + 40, box.y), box, gt, colorTheme.bgSelection
-  image.draw ($file.info.size).toRunes, colorTheme.cActive, vec2(box.x + 250, box.y), box, gt, colorTheme.bgSelection
-  image.draw ($file.info.lastWriteTime.format("hh:mm dd/MM/yy")).toRunes, colorTheme.cActive, vec2(box.x + 350, box.y), box, gt, colorTheme.bgSelection
-
-
-component Dir {.noexport.}:
-  proc handle(
-    file: File,
-    gt: var GlyphTable,
-  )
-
-  let box = parentBox
-  let dy = round(gt.font.size * 1.27)
-
-  image.draw(getIcon(file), translate(vec2(box.x + 20, box.y + 4)) * scale(vec2(0.06 * dy, 0.06 * dy)))
-
-  image.draw (file.name & file.ext).toRunes, colorTheme.cActive, vec2(box.x + 40, box.y), box, gt, colorTheme.bgTextArea
-  image.draw ($file.info.size).toRunes, colorTheme.cActive, vec2(box.x + 250, box.y), box, gt, colorTheme.bgTextArea
-  image.draw ($file.info.lastWriteTime.format("hh:mm dd/MM/yy")).toRunes, colorTheme.cActive, vec2(box.x + 350, box.y), box, gt, colorTheme.bgTextArea
+  Text disk(x = 10):
+    color = colorTheme.cActive
+    bg =
+      if selected: colorTheme.bgSelection
+      else: bg
 
 component File {.noexport.}:
   proc handle(
     file: File,
-    gt: var GlyphTable,
+    selected: bool,
+    bg: ColorRgb,
   )
 
-  let box = parentBox
-  let dy = round(gt.font.size * 1.27)
+  let dy = round(glyphTableStack[^1].font.size * 1.27)
+  
+  if selected:
+    Rect: color = colorTheme.bgSelection
+    Rect(w = 2): color = colorTheme.bgSelectionLabel
+  
+  let bg =
+    if selected: colorTheme.bgSelection
+    else: bg
+  
+  contextStack[^1].image.draw(getIcon(file), translate(parentBox.xy + vec2(20, 4)) * scale(vec2(0.06 * dy, 0.06 * dy)))
 
-  image.draw(getIcon(file), translate(vec2(box.x + 20, box.y + 4)) * scale(vec2(0.06 * dy, 0.06 * dy)))
+  Text (file.name & file.ext)(x = 40, w = 200, clip = true):
+    color = colorTheme.cActive
+    bg = bg
 
-  image.draw (file.name & file.ext).toRunes, colorTheme.cActive, vec2(box.x + 40, box.y), box, gt, colorTheme.bgTextArea
-  image.draw ($file.info.size).toRunes, colorTheme.cActive, vec2(box.x + 250, box.y), box, gt, colorTheme.bgTextArea
-  image.draw ($file.info.lastWriteTime.format("hh:mm dd/MM/yy")).toRunes, colorTheme.cActive, vec2(box.x + 350, box.y), box, gt, colorTheme.bgTextArea
+  Text ($file.info.size)(x = 250, w = 90, clip = true):
+    color = colorTheme.cActive
+    bg = bg
+
+  Text ($file.info.lastWriteTime.format("hh:mm dd/MM/yy"))(left = 350, clip = true):
+    color = colorTheme.cActive
+    bg = bg
 
 
 component Explorer:
   proc handle(
     expl: var Explorer,
-    gt: var GlyphTable,
     bg: ColorRgb,
   )
 
-  let box = parentBox
-
-  let dy = round(gt.font.size * 1.27)
-  var y = box.y - dy * (expl.pos mod 1)
+  let dy = round(glyphTableStack[^1].font.size * 1.27)
+  var y = -dy * (expl.pos mod 1)
 
   var max_file_length = 0
   var max_file_size: BiggestInt = 0
@@ -269,33 +234,25 @@ component Explorer:
     max_file_length = if (file.name & file.ext).len() > max_file_length: (file.name & file.ext).len() else: max_file_length
     max_file_size = if file.info.size > max_file_size: file.info.size else: max_file_size
 
-  # ! sorted on each component rerender | check if seq already sorted or take the sort to updateDir
+  #! sorted on each component rerender
+  # todo: check if seq already sorted or take the sort to updateDir
   sort(expl.files, folderUpCmp)
 
-  r.image.draw expl.current_dir.toRunes, colorTheme.sKeyword, vec2(box.x, y), box, gt, bg
+  Text expl.current_dir(y = y):
+    color = colorTheme.sKeyword
+    bg = bg
   y += dy
 
   if not expl.display_disk_list:
     for i, file in expl.files.pairs:
-      if i == int(expl.item_index):
-        SelectedItem file(y = y):
-          gt = gt
-      else:
-        if file.info.kind == PathComponent.pcDir:
-          Dir file(y = y):
-            gt = gt
-        else:
-          File file(y = y):
-            gt = gt
-
+      File file(y = y, h = dy):
+        selected = i == expl.item_index
+        bg = bg
       y += dy
+
   else:
     for i, disk in expl.disk_list:
-      if i == int(expl.item_index):
-        SelectedDisk disk(y = y):
-          gt = gt
-      else:
-        Disk disk(y = y):
-          gt = gt
-
+      Disk disk(y = y, h = dy):
+        selected = i == expl.item_index
+        bg = bg
       y += dy

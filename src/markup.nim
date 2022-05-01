@@ -1,30 +1,33 @@
 import macros, tables, unicode
 import pixwindy, pixie, fusion/matching, fusion/astdsl
-import render
-export pixwindy, pixie, render
+export pixwindy, pixie
 
 {.experimental: "caseStmtMacros".}
 
 var
   boxStack*: seq[Rect]
+  clipStack*: seq[Rect]
 
-template frameImpl(fbox: Rect; clip: bool; body) =
-  # todo: clip
+template frameImpl(fbox: Rect; fclip: bool; body) =
   bind boxStack
-  bind bound
+  bind clipStack
+
   block:
-    var box {.inject.}: Rect
+    var box {.inject.}: Rect = fbox
     if boxStack.len == 0:
-      box = fbox
       boxStack.add box
     else:
-      box = fbox
       box.xy = box.xy + boxStack[^1].xy
       boxStack.add box
+    
+    if fclip:
+      clipStack.add box
 
     block: body
 
     boxStack.del boxStack.high
+    if fclip:
+      clipStack.del clipStack.high
 
 template parentBox*: Rect =
   bind boxStack
@@ -32,6 +35,7 @@ template parentBox*: Rect =
 
 
 proc makeFrame(args: seq[NimNode]): NimNode =
+  # todo: use anchors (like in qml)
   let body = args[^1]
   let
     whs = gensym(nskLet, "wh")
@@ -58,6 +62,7 @@ proc makeFrame(args: seq[NimNode]): NimNode =
     error("can't use both margin and coordinate", (if "left" in d: d["left"] else: d["right"]))
   if ("top" in d or "bottom" in d) and ("xy" in d or "centerIn" in d or "y" in d or "h" in d or "wh" in d):
     error("can't use both margin and coordinate", (if "left" in d: d["left"] else: d["right"]))
+  # todo: improve checks
 
   buildAst: blockStmt empty(), stmtList do:
     if "left" in d or "right" in d or "top" in d or "bottom" in d:
@@ -90,6 +95,8 @@ proc makeFrame(args: seq[NimNode]): NimNode =
               infix ident"-":
                 dotExpr(call(bindSym"parentBox"), ident"w")
                 call ident"float32", d["right"]
+            elif "w" in d:
+              d["w"]
             else:
               dotExpr(call(bindSym"parentBox"), ident"w")
 
@@ -107,6 +114,8 @@ proc makeFrame(args: seq[NimNode]): NimNode =
               infix ident"-":
                 dotExpr(call(bindSym"parentBox"), ident"h")
                 call ident"float32", d["bottom"]
+            elif "h" in d:
+              d["h"]
             else:
               dotExpr(call(bindSym"parentBox"), ident"h")
 
@@ -138,17 +147,48 @@ proc makeFrame(args: seq[NimNode]): NimNode =
           newLit 2
 
     else:
-      if "xy" in d:
+      if "horisontalCenterIn" in d:
+        letSection: identDefs:
+          xys
+          empty()
+          call ident"vec2":
+            infix ident"/":
+              infix ident"-":
+                dotExpr(d["horisontalCenterIn"], ident"w")
+                dotExpr whs, ident"x"
+              newLit 2
+            call ident"float32":
+              if "y" in d:   d["y"]
+              elif "top" in d: tms
+              else:          newLit 0
+
+      elif "verticalCenterIn" in d:
+        letSection: identDefs:
+          xys
+          empty()
+          call ident"vec2":
+            call ident"float32":
+              if "x" in d:    d["x"]
+              elif "left" in d: lms
+              else:           newLit 0
+            infix ident"/":
+              infix ident"-":
+                dotExpr(d["verticalCenterIn"], ident"h")
+                dotExpr whs, ident"y"
+              newLit 2
+
+      elif "xy" in d:
         letSection: identDefs:
           xys
           empty()
           call ident"vec2", d["xy"]
+
       else:
         letSection: identDefs:
           xys
           empty()
           call ident"vec2":
-            call ident"float32": 
+            call ident"float32":
               if "x" in d:    d["x"]
               elif "left" in d: lms
               else:           newLit 0
@@ -176,20 +216,20 @@ macro frame*(args: varargs[untyped]) =
 
 macro component*(name, body: untyped) =
   var noexport: bool
-  var name = name
-  let rsym = ident"r"
-  let imgsym = ident"image"
-  case name
-  of PragmaExpr[@ni is Ident(), Pragma[Ident(strVal: "noexport")]]:
-    name = ni
+  var name = case name
+  of PragmaExpr[Ident(strVal: @ni), Pragma[Ident(strVal: "noexport")]]:
     noexport = true
-  else: discard
+    ni
+  of Ident(strVal: @ni): ni
+  else:
+    error("unexpected syntax", name)
+    ""
 
   proc isTypename(x: NimNode): bool =
     x.kind == nnkIdent and x.strVal.runeAt(0).isUpper
 
   proc impl(x: NimNode): NimNode =
-    proc handleComponent(name: NimNode, args: seq[NimNode], firstArg: NimNode): NimNode =
+    proc handleComponent(name: string, args: seq[NimNode], firstArg: NimNode): NimNode =
       var body1: seq[NimNode]
       var body2: seq[NimNode]
       var d: Table[string, NimNode]
@@ -202,11 +242,12 @@ macro component*(name, body: untyped) =
         if a.kind in {nnkExprEqExpr, nnkAsgn} and a[0].kind == nnkIdent:
           let s = a[0].strVal
           case s
-          of "w", "h", "wh", "x", "y", "xy", "clip", "left", "right", "top", "bottom":
+          of "w", "h", "wh", "x", "y", "xy", "clip", "left", "right", "top", "bottom", "centerIn", "verticalCenterIn", "horisontalCenterIn":
             fd.add a
           else:
             if s in d: error("duplicated property", a[0])
             d[s] = a[1]
+
         else:
           if i > lasteq:
             body2.add a
@@ -220,10 +261,7 @@ macro component*(name, body: untyped) =
 
           let b = buildAst stmtList:
             call:
-              ident"handle"
-              name
-              rsym
-              imgsym
+              ident "handle" & name
               if firstArg != nil: firstArg
               for k, v in d:
                 exprEqExpr:
@@ -232,12 +270,23 @@ macro component*(name, body: untyped) =
             for x in body2: impl(x)
 
           if fd.len != 0:
+            for x in fd.mitems:
+              if x[1] == ident"auto":
+                x = buildAst exprEqExpr:
+                  x[0]
+                  call:
+                    ident "getAuto" & name & $x[0]
+                    if firstArg != nil: firstArg
+                    for k, v in d:
+                      exprEqExpr:
+                        ident k
+                        v
             makeFrame(fd & b)
           else: b
 
     case x
     # T: d=e and T(b=c): d=e
-    of Call[@name is Ident(isTypename: true), @arg, all @args]:
+    of Call[Ident(isTypename: true, strVal: @name), @arg, all @args]:
       if args.len == 0 and arg.kind == nnkStmtList:
         handleComponent name, arg[0..^1], nil
       elif args.len != 0 and args[^1].kind == nnkStmtList:
@@ -246,12 +295,17 @@ macro component*(name, body: untyped) =
         x
 
     # T a(b=c)
-    of Command[@name is Ident(isTypename: true), Call[@arg, all @args]]:
+    of Command[Ident(isTypename: true, strVal: @name), Call[@arg, all @args]]:
       handleComponent name, args, arg
 
     # T a(b=c): d=e
-    of Command[@name is Ident(isTypename: true), Call[@arg, all @args], @args2 is StmtList()]:
+    of Command[Ident(isTypename: true, strVal: @name), Call[@arg, all @args], @args2 is StmtList()]:
       handleComponent name, args & args2[0..^1], arg
+
+    # T a: d=e
+    of Command[Ident(isTypename: true, strVal: @name), @arg, @args is StmtList()]:
+      handleComponent name, args[0..^1], arg
+
 
     elif x.len > 0:
       var y = x
@@ -260,43 +314,52 @@ macro component*(name, body: untyped) =
 
     else: x
 
-  buildAst stmtList:
-    if noexport:
-      quote do:
-        when not compiles(`name`):
-          type `name` = object
-    else:
-      quote do:
-        when not compiles(`name`):
-          type `name`* = object
 
+  buildAst stmtList:
     var body = body[0..^1]
+    var props: seq[NimNode]
+    if body.len != 0 and body[0].kind == nnkProcDef and body[0][0] == ident"handle":
+      props = body[0].params[1..^1]
+      body = body[1..^1]
+
+    var b: seq[NimNode]
+    for x in body:
+      case x
+      # auto a: v
+      of Command[Ident(strVal: "auto"), Ident(strVal: @prop), @e]:
+        procDef:
+          # todo: copy line info
+          if noexport:
+            ident "getAuto" & name & prop
+          else: postfix:
+            ident"*"
+            ident "getAuto" & name & prop
+          empty()
+          empty()
+          formalParams:
+            bindsym"auto"
+            for x in props: x
+          empty()
+          empty()
+          stmtList:
+            for x in b: x
+            e
+        
+      else:
+        b.add impl(x)
 
     procDef:
-      if noexport: ident"handle"
+      if noexport:
+        ident "handle" & name
       else: postfix:
         ident"*"
-        ident"handle"
+        ident "handle" & name
       empty()
       empty()
       formalParams:
         empty()
-        identDefs:
-          gensym(nskParam)
-          bracketExpr(ident"typedesc", name)
-          empty()
-        identDefs:
-          rsym
-          bindSym"Context"
-          empty()
-        identDefs:
-          imgsym
-          bindSym"Image"
-          empty()
-        if body.len != 0 and body[0].kind == nnkProcDef and body[0][0] == ident"handle":
-          for x in body[0].params[1..^1]: x
-          body = body[1..^1]
+        for x in props: x
       empty()
       empty()
       stmtList:
-        for x in body: impl(x)
+        for x in b: x

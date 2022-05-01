@@ -1,5 +1,5 @@
 import sequtils, unicode, math
-import markup, syntax_highlighting, configuration, text
+import render, syntax_highlighting, configuration, text
 
 type
   Indentation* = seq[tuple[len: seq[int], has_graph: bool]]
@@ -100,7 +100,6 @@ proc newTextEditor*(file: string): TextEditor =
 
 component TextArea {.noexport.}:
   proc handle(
-    gt: var GlyphTable,
     pos: float32,
     bg: ColorRgb,
     text: Text,
@@ -110,27 +109,31 @@ component TextArea {.noexport.}:
 
   let
     box = parentBox
+    gt = glyphTableStack[^1]
     size = (box.h / gt.font.size).ceil.int
     space_w = static(" ".toRunes).width(gt)
 
     dy = round(gt.font.size * 1.27)
   
-  var y = box.y - dy * (pos mod 1)
+  var y = -dy * (pos mod 1)
 
-  for i in (pos.int..pos.ceil.int+size).bound(0..text.lines.high):
-    r.image.draw text{i}.toOpenArray, colors.toOpenArray(text.lines[i].first, text.lines[i].last), vec2(box.x, y), box, gt, bg
+  Frame(clip = true):
+    for i in (pos.int..pos.ceil.int+size).bound(0..text.lines.high):
+      Text text{i}.toOpenArray(y=y):
+        colors = colors.toOpenArray(text.lines[i].first, text.lines[i].last)
+        bg = bg
 
-    var x = box.x.round.int
-    for i, l in indentation[i].len:
-      r.image.vertical_line x.int32, y.int32, dy.int32, box, colorTheme.bgVerticalLine
-      x += l * space_w
+      var x = box.x.round.int
+      for i, l in indentation[i].len:
+        VerticalLine(x=x, y=y, h=dy):
+          color = colorTheme.bgVerticalLine
+        x += l * space_w
 
-    y += dy
+      y += dy
 
 
 component LineNumbers {.noexport.}:
   proc handle(
-    gt: var GlyphTable,
     pos: float32,
     bg: ColorRgb,
     lineCount: int,
@@ -139,20 +142,26 @@ component LineNumbers {.noexport.}:
 
   let
     box = parentBox
+    gt = glyphTableStack[^1]
     size = (box.h / gt.font.size).ceil.int
     dy = round(gt.font.size * 1.27)
     right = (box.w + toRunes($lineCount).width(gt).float32) / 2
 
-  var y = round(box.y - gt.font.size * 1.27 * (pos mod 1))
+  var y = round(-gt.font.size * 1.27 * (pos mod 1))
   for i in (pos.int..pos.ceil.int+size).bound(0..<lineCount):
     let s = toRunes $(i+1)
     let w = float32 s.width(gt)
+
     if i == cursor.y:
-      r.fillStyle = colorTheme.bgLineNumbersSelect.color
-      r.fillRect rect(vec2(box.x,y), vec2(box.w, dy))
-      r.image.draw s, sLineNumber.color, vec2(box.x + right - w, y), box, gt, colorTheme.bgLineNumbersSelect
-    else:
-      r.image.draw s, sLineNumber.color, vec2(box.x + right - w, y), box, gt, bg
+      Rect(y=y, h=dy):
+        color = colorTheme.bgLineNumbersSelect
+
+    Text s(x=right-w, y=y):
+      color = sLineNumber.color
+      bg =
+        if i == cursor.y: colorTheme.bgLineNumbersSelect
+        else: bg
+
     y += round(gt.font.size * 1.27)
 
 
@@ -162,19 +171,14 @@ component ScrollBar {.noexport.}:
     size: int,
     total: int
   )
-
   if total == 0: return
+
   let
     a = pos / total.float32
     b = (pos + size.float32) / total.float32
 
-  let box = rect(
-    vec2(parentBox.x, parentBox.y + (parentBox.h * a)),
-    vec2(parentBox.w, parentBox.h * (b - a))
-  )
-
-  r.fillStyle = colorTheme.bgScrollBar
-  r.fillRect box
+  Rect(y = parentBox.h * a, h = parentBox.h * (b - a)):
+    color = colorTheme.bgScrollBar
 
 #todo: move variables
 var blink* = true;
@@ -182,24 +186,22 @@ var blink_time* = 0;
 
 component Cursor:
   proc handle(
-    gt: var GlyphTable,
     pos: float32,
     cpos: IVec2,
     text: Text,
   )
   if text.len == 0: return
+
+  let gt = glyphTableStack[^1]
   
   var width = gt.font.size / 8
 
   let
-    box = parentBox
     y = cpos.y.int.bound(0..text.lines.high)
     lineStart = text.lines[y].first
     lineEnd = text.lines[y].last
     x = cpos.x.int.bound(0 .. lineEnd-lineStart + 1)
   
-  r.fillStyle = colorTheme.sText
-
   var cursor_width = case config.caretStyle
   of CaretStyle.rect, CaretStyle.underline:
     # set caret width like a symbol
@@ -209,42 +211,33 @@ component Cursor:
     # set narrow caret
     -(width / 2)
 
-  let rect = rect(
-      box.xy + vec2(
-        text[lineStart ..< lineStart + x].toOpenArray.width(gt).float32 + cursor_width,
-        round(gt.font.size * 1.27) * (y.float32 - pos)
-      ),
-      vec2(width, round(gt.font.size * 1.27))
-    )
-
-  if config.caretBlink:
-    if blink: r.fillRect rect
-  else:
-    r.fillRect rect
+  if (config.caretBlink and blink) or not config.caretBlink:
+    Rect(w = width, h = round(gt.font.size * 1.27)):
+      x = text[lineStart ..< lineStart + x].toOpenArray.width(gt).float32 + cursor_width
+      y = round(gt.font.size * 1.27) * (y.float32 - pos)
+      color = colorTheme.sText
 
 
 component TextEditor:
   proc handle(
     editor: TextEditor,
-    gt: var GlyphTable,
     bg: ColorRgb,
   )
 
   let
+    gt = glyphTableStack[^1]
     size = (parentBox.h / gt.font.size).ceil.int
     total = editor.text.lines.len
 
     line_number_width = float32 ($total).toRunes.width(gt)
   
   LineNumbers(w = line_number_width + 20):
-    gt = gt
     pos = editor.visual_pos
     bg = colorTheme.bgLineNumbers
     lineCount = total
     cursor = editor.cursor
 
   TextArea(left = line_number_width + 20, right = 10):
-    gt = gt
     pos = editor.visual_pos
     bg = colorTheme.bgTextArea
     text = editor.text
@@ -252,7 +245,6 @@ component TextEditor:
     indentation = editor.indentation
 
     Cursor:
-      gt = gt
       pos = editor.visual_pos
       cpos = editor.cursor
       text = editor.text

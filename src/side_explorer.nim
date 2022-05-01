@@ -1,4 +1,4 @@
-import std/sequtils, os, std/unicode, math, strutils, std/algorithm
+import std/sequtils, os, std/unicode, math, std/algorithm
 import pixwindy, pixie
 import render, configuration, markup
 
@@ -138,84 +138,66 @@ proc updateExplorer(explorer: var SideExplorer, file: File) =
   explorer.current_item_name = file.name
   explorer.current_item_ext = file.ext
 
-component SelectedItem {.noexport.}:
-  proc handle(
-    explorer: var SideExplorer,
-    file: File,
-    nesting_indent: string,
-    text: string,
-    gt: var GlyphTable,
-    icon_const: float32,
-    count_item: int,
-  )
-
-  let box = parentBox
-  let dy = round(gt.font.size * 1.40)
-
-  updateExplorer(explorer, file)
-
-  r.fillStyle = colorTheme.bgSelection
-  r.fillRect rect(vec2(0, explorer.y), vec2(box.w, dy))
-
-  r.fillStyle = colorTheme.bgSelectionLabel
-  r.fillRect rect(vec2(0, explorer.y), vec2(2, dy))
-
-  image.draw(getIcon(explorer, file), translate(vec2(box.x + 20 + nesting_indent.toRunes.width(gt).float32, explorer.y + 4)) * scale(vec2(icon_const * dy, icon_const * dy)))
-
-  image.draw text.toRunes, colorTheme.cActive, vec2(box.x + 40, explorer.y), box, gt, colorTheme.bgSelection
-  explorer.y += dy
-
 component Item {.noexport.}:
   proc handle(
     explorer: var SideExplorer,
     file: File,
-    nesting_indent: string,
+    nesting_indent: int,
     text: string,
-    gt: var GlyphTable,
     icon_const: float32,
     count_item: int,
+    selected: bool,
   )
 
-  let box = parentBox
-  let dy = round(gt.font.size * 1.40)
+  let
+    box = parentBox
+    gt = glyphTableStack[^1]
+    dy = round(gt.font.size * 1.40)
 
-  image.draw(getIcon(explorer, file), translate(vec2(box.x + 20 + nesting_indent.toRunes.width(gt).float32, explorer.y + 4)) * scale(vec2(icon_const * dy, icon_const * dy)))
+  updateExplorer(explorer, file)
 
-  image.draw text.toRunes, colorTheme.cActive, vec2(box.x + 40, explorer.y), box, gt, colorTheme.bgExplorer
-  explorer.y += dy
+  if selected:
+    Rect: color = colorTheme.bgSelection
+    Rect(w = 2): color = colorTheme.bgSelectionLabel
+  
+  contextStack[^1].image.draw(getIcon(explorer, file), translate(vec2(box.x + 20 + nesting_indent.float32 * 20, box.y + 4)) * scale(vec2(icon_const * dy, icon_const * dy)))
+
+  Text text(x = 20 + nesting_indent.float32 * 20 + 20):
+    color = colorTheme.cActive
+    bg = if selected: colorTheme.bgSelection else: colorTheme.bgExplorer
+
+  explorer.y += dy # todo: move this out
 
 component Title {.noexport.}:
   proc handle(
     explorer: var SideExplorer,
-    gt: var GlyphTable,
   )
 
-  let box = parentBox
-  let dy = round(gt.font.size * 1.40)
+  let
+    gt = glyphTableStack[^1]
+    dy = round(gt.font.size * 1.40)
 
-  var middle_x = box.x + ( ( box.w - "Explorer".toRunes.width(gt).float32 ) / 2 )
-
-  r.fillStyle = colorTheme.bgExplorer
-  r.fillRect box
-
-  r.image.draw "Explorer".toRunes, colorTheme.cActive, vec2(middle_x.float32, explorer.y), box, gt, configuration.colorTheme.bgExplorer
+  Text "Explorer"(horisontalCenterIn = parentBox, w = "Explorer".toRunes.width(gt), h = dy):
+    color = colorTheme.cActive
+    bg = colorTheme.bgExplorer
   explorer.y += dy
 
-  r.image.draw toRunes(explorer.dir.path), colorTheme.cInActive, vec2(box.x, explorer.y), box, gt, configuration.colorTheme.bgExplorer
+  Text explorer.dir.path(y = dy):
+    color = colorTheme.cInActive
+    bg = colorTheme.bgExplorer
   explorer.y += dy
 
 component SideExplorer:
   proc handle(
     explorer: var SideExplorer,
-    gt: var GlyphTable,
     dir: File,
     nesting: int32 = 0,
   )
 
-  
   var box = parentBox
-  var dy = round(gt.font.size * 1.40)
   let
+    gt = glyphTableStack[^1]
+    dy = round(gt.font.size * 1.40)
     icon_const = 0.06
   var
     dir = dir
@@ -223,18 +205,18 @@ component SideExplorer:
     count_items = explorer.count_items
     pos = explorer.pos
 
+  Rect: color = colorTheme.bgExplorer
+
   if nesting == 0:
     explorer.y = 40
     count_items = 0
     explorer.count_items = 0
     
-    Title():
+    Title(h = dy * 2):
       explorer = explorer
-      gt = gt
 
-    
-
-  # ! sorted on each component rerender | check if seq already sorted or take the sort to updateDir
+  #! sorted on each component rerender
+  # todo: check if seq already sorted or take the sort to updateDir
 
   var dir_files: seq[File] = @[]
   var dir_folders: seq[File] = @[]
@@ -250,31 +232,19 @@ component SideExplorer:
   dir.files = dir_folders & dir_files
   
   for i, file in dir.files.pairs:
-
     inc count_items
 
-    let nesting_indent = " ".repeat(nesting * 2)
-    let text = nesting_indent & file.name & file.ext
+    let text = file.name & file.ext
 
     if count_items in pos.int..pos.ceil.int+size:
-      if count_items == int(explorer.item_index):
-        SelectedItem():
-          explorer = explorer
-          file = file
-          nesting_indent = nesting_indent
-          text = text
-          gt = gt
-          icon_const = icon_const
-          count_item = count_items
-      else:
-        Item():
-          explorer = explorer
-          file = file
-          nesting_indent = nesting_indent
-          text = text
-          gt = gt
-          icon_const = icon_const
-          count_item = count_items
+      Item(y = explorer.y, h = dy):
+        explorer = explorer
+        file = file
+        nesting_indent = nesting
+        text = text
+        icon_const = icon_const
+        count_item = count_items
+        selected = count_items == int(explorer.item_index)
     
     if file.info.kind == PathComponent.pcDir:
       if OpenDir(path: file.path / file.name & file.ext) in explorer.open_dirs:
@@ -284,7 +254,6 @@ component SideExplorer:
         explorer.count_items = count_items
 
         SideExplorer explorer(x = parentBox.x, y = parentBox.y, w = parentBox.w, h = parentBox.h):
-          gt = gt
           dir = dir.files[i]
           nesting = nesting + 1
         

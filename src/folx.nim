@@ -1,6 +1,6 @@
 import sequtils, os, times, math, unicode, std/monotimes, options
 import cligen
-import markup, configuration, git, text, text_editor, side_explorer, explorer, title, status_bar, welcome
+import render, configuration, git, text, text_editor, side_explorer, explorer, title, status_bar, welcome
 
 proc contains*(b: Rect, a: GVec2): bool =
   let a = a.vec2
@@ -93,82 +93,84 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
 
   component Folx {.noexport.}:
     if explorer.display:
-      Explorer explorer(right = 10, bottom = 20):
-        gt = editor_gt
-        bg = colorTheme.bgTextArea
+      withGlyphTable interface_gt:
+        Explorer explorer(right = 10, bottom = 20):
+          bg = colorTheme.bgTextArea
 
     elif side_explorer.display:
-      SideExplorer side_explorer(x = 0, y = 0, w = 260, h = window.size.vec2.y):
-        gt = editor_gt
-        dir = side_explorer.dir
+      withGlyphTable editor_gt:
+        if opened_files.len != 0:
+          TextEditor text_editor(left = 260, top = 40, bottom = 20):
+            bg = colorTheme.bgTextArea
 
-      if opened_files.len != 0:
-        TextEditor text_editor(x = 260, y = 40, w = window.size.vec2.x - 260, h = window.size.vec2.y - 60):
-          gt = editor_gt
-          bg = colorTheme.bgTextArea
-      else:
-        Welcome(wh = window.size.vec2):
-          gt = editor_gt
-          
-      TitleBar(w = window.size.vec2.x, h = 40):
-        gt = interface_gt
+      withGlyphTable interface_gt:
+        TitleBar(w = window.size.vec2.x, h = 40):
+          discard
 
-      StatusBar(y = window.size.vec2.y - 20, w = window.size.vec2.x, h = 20):
-        gt = interface_gt
-        bg = colorTheme.bgStatusBar
+        SideExplorer side_explorer(top = 40, bottom = 20, w = 260):
+          dir = side_explorer.dir
 
-        fieldsStart = @[
-          ("Items: ", $side_explorer.count_items),
-          ("Item: ", $side_explorer.item_index),
-        ]
+        if opened_files.len == 0:
+          Welcome(left = 260, top = 40, bottom = 20):
+            discard
 
-        fieldsEnd = @[
-          ("", ""),
-        ] & (
-          if side_explorer.current_dir.gitBranch.isSome: @[
-            ("git: ", side_explorer.current_dir.gitBranch.get),
-          ] else: @[]
-        ) & @[
-          ("", if opened_files.len > 0: getFileExt(opened_files[0]) else: getFileExt(""))
-        ]
+        StatusBar(top = window.size.vec2.y - 20):
+          bg = colorTheme.bgStatusBar
+
+          fieldsStart = @[
+            ("Items", $side_explorer.count_items),
+            ("Item", $side_explorer.item_index),
+          ]
+
+          fieldsEnd = @[
+            ("", ""),
+          ] & (
+            if side_explorer.current_dir.gitBranch.isSome: @[
+              ("git", side_explorer.current_dir.gitBranch.get),
+            ] else: @[]
+          ) & @[
+            ("", if opened_files.len > 0: getFileExt(opened_files[0]) else: getFileExt(""))
+          ]
 
     else:
-      if opened_files.len != 0:
-        TextEditor text_editor(top = 40, bottom = 20):
-          gt = editor_gt
-          bg = colorTheme.bgTextArea
-      else:
-        Welcome(wh = window.size.vec2):
-          gt = editor_gt
+      withGlyphTable editor_gt:
+        if opened_files.len != 0:
+          TextEditor text_editor(top = 40, bottom = 20):
+            bg = colorTheme.bgTextArea
 
-      TitleBar(w = window.size.vec2.x, h = 40):
-        gt = interface_gt
+      withGlyphTable interface_gt:
+        TitleBar(w = window.size.vec2.x, h = 40):
+          discard
 
-      StatusBar(top = window.size.vec2.y - 20):
-        gt = interface_gt
-        bg = colorTheme.bgStatusBar
+        if opened_files.len == 0:
+          Welcome(top = 40, bottom = 20):
+            discard
 
-        fieldsStart = @[
-          ("Line: ", $text_editor.cursor[1]),
-          ("Col: ", $text_editor.cursor[0]),
-        ]
+        StatusBar(top = window.size.vec2.y - 20):
+          bg = colorTheme.bgStatusBar
 
-        fieldsEnd = @[
-          ("", ""),
-        ] & (
-          if side_explorer.current_dir.gitBranch.isSome: @[
-            ("git: ", side_explorer.current_dir.gitBranch.get),
-          ] else: @[]
-        ) & @[
-          ("", if opened_files.len > 0: getFileExt(opened_files[0]) else: getFileExt(""))
-        ]
+          fieldsStart = @[
+            ("Line", $text_editor.cursor[1]),
+            ("Col", $text_editor.cursor[0]),
+          ]
+
+          fieldsEnd = @[
+            ("", ""),
+          ] & (
+            if side_explorer.current_dir.gitBranch.isSome: @[
+              ("git", side_explorer.current_dir.gitBranch.get),
+            ] else: @[]
+          ) & @[
+            ("", if opened_files.len > 0: getFileExt(opened_files[0]) else: getFileExt(""))
+          ]
 
 
   proc display =
     image.clear colorTheme.bgTextArea.color.rgbx
 
     frame(wh = window.size, clip=true):
-      Folx.handle(r, image)
+      withContext r:
+        handleFolx()
 
     window.draw image
 
@@ -302,8 +304,8 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
         )
       )
 
-  display()
   window.visible = true
+  display()
 
   var pt = getMonoTime()  # main clock
   while not window.closeRequested:
