@@ -34,6 +34,8 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
   let window = newWindow("folx", config.window.size, visible=false)
   window.runeInputEnabled = true
 
+  if config.window.customTitleBar: window.style = Undecorated
+
   var
     editor_gt    = readFont(rc config.font).newGlyphTable(config.fontSize)
     interface_gt = readFont(rc config.interfaceFont).newGlyphTable(config.interfaceFontSize)
@@ -50,6 +52,7 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
 
   var side_explorer = SideExplorer(current_dir: workspace, item_index: 1, display: false, pos: 0, y: 40, count_items: 0)
   var explorer = Explorer(display_disk_list: false, current_dir: "", item_index: 0, files: @[], display: false, pos: 0)
+  var title = Title(name: "")
 
   proc open_file(file: string) =
     window.title = file & " - folx"
@@ -205,6 +208,11 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
     r = image.newContext
     display()
 
+  window.onMouseMove = proc() =
+    title.onMouseMove(
+      window = window
+    )
+
   window.onButtonPress = proc(button: Button) =
     if window.buttonDown[KeyLeftControl] and button == KeyE:
       explorer.display = false
@@ -266,6 +274,11 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
         ),
       )
     
+    title.onButtonDown(
+      button = button, 
+      window = window,
+    )
+
     display()
 
   window.onRune = proc(rune: Rune) =

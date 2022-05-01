@@ -21,6 +21,7 @@ type
 
   WindowConfig* = object
     size*: IVec2
+    customTitleBar*: bool
 
   ColorTheme* = object
     cActive*: ColorRGB
@@ -110,6 +111,7 @@ const defaultConfig = Config(
   
   window: WindowConfig(
     size: ivec2(1280, 720),
+    customTitleBar: true,
   ),
 
   file: "",
