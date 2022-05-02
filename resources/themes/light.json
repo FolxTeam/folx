@@ -1,6 +1,7 @@
 {
     "cActive": "DDDDDD",
     "cInActive": "AAAAAA",
+    "cMiddle": "555555",
 
     "bgScrollBar": "c1c1c1",
     "bgVerticalLine": "d3d3d3",

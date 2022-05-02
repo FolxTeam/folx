@@ -1,6 +1,6 @@
 import sequtils, os, times, math, unicode, std/monotimes, options
 import cligen
-import markup, configuration, git, text, text_editor, side_explorer, explorer, title, status_bar
+import markup, configuration, git, text, text_editor, side_explorer, explorer, title, status_bar, welcome
 
 proc contains*(b: Rect, a: GVec2): bool =
   let a = a.vec2
@@ -106,6 +106,9 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
         TextEditor text_editor(x = 260, y = 40, w = window.size.vec2.x - 260, h = window.size.vec2.y - 60):
           gt = editor_gt
           bg = colorTheme.bgTextArea
+      else:
+        Welcome(wh = window.size.vec2):
+          gt = editor_gt
           
       TitleBar(w = window.size.vec2.x, h = 40):
         gt = interface_gt
@@ -134,6 +137,9 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
         TextEditor text_editor(top = 40, bottom = 20):
           gt = editor_gt
           bg = colorTheme.bgTextArea
+      else:
+        Welcome(wh = window.size.vec2):
+          gt = editor_gt
 
       TitleBar(w = window.size.vec2.x, h = 40):
         gt = interface_gt

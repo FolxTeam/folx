@@ -26,6 +26,7 @@ type
   ColorTheme* = object
     cActive*: ColorRGB
     cInActive*: ColorRGB
+    cMiddle*: ColorRGB
   
     bgScrollBar*: ColorRGB
     bgVerticalLine*: ColorRGB
@@ -126,6 +127,7 @@ const defaultColorTheme = ColorTheme(
 
   cActive: rgb(221, 221, 221),
   cInActive: rgb(170, 170, 170),
+  cMiddle: rgb(85, 85, 85),
 
   bgScrollBar: rgb(48, 48, 48),
   bgVerticalLine: rgb(64, 64, 64),
