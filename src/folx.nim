@@ -98,7 +98,7 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
         bg = colorTheme.bgTextArea
 
     elif side_explorer.display:
-      SideExplorer side_explorer(x = 0, y = 0, w = 260, h = window.size.vec2.y - 60):
+      SideExplorer side_explorer(x = 0, y = 0, w = 260, h = window.size.vec2.y):
         gt = editor_gt
         dir = side_explorer.dir
 
