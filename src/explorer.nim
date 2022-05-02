@@ -159,13 +159,19 @@ proc onButtonDown*(
         explorer.updateDir explorer.current_dir
 
   of KeyEnter:
+    if explorer.display_disk_list:
+      explorer.current_dir = explorer.disk_list[explorer.item_index]
+      explorer.display_disk_list = false
+      config.workspace = explorer.current_dir
+      onWorkspaceOpen(config.workspace)
+      return
+
     let file = explorer.files[explorer.item_index]
     
     if file.info.kind == PathComponent.pcDir:
       config.workspace = explorer.current_dir / file.name & file.ext
       onWorkspaceOpen(config.workspace)
       
-  
   else: discard
 
 component Disk {.noexport.}:
@@ -219,40 +225,32 @@ component File {.noexport.}:
 
 component Explorer:
   proc handle(
-    expl: var Explorer,
+    explorer: var Explorer,
     bg: ColorRgb,
   )
 
   let dy = round(glyphTableStack[^1].font.size * 1.27)
-  var y = -dy * (expl.pos mod 1)
-
-  var max_file_length = 0
-  var max_file_size: BiggestInt = 0
-  
-  # todo: refactor long expressions
-  for file in expl.files:
-    max_file_length = if (file.name & file.ext).len() > max_file_length: (file.name & file.ext).len() else: max_file_length
-    max_file_size = if file.info.size > max_file_size: file.info.size else: max_file_size
+  var y = -dy * (explorer.pos mod 1)
 
   #! sorted on each component rerender
   # todo: check if seq already sorted or take the sort to updateDir
-  sort(expl.files, folderUpCmp)
+  sort(explorer.files, folderUpCmp)
 
-  Text expl.current_dir(y = y):
+  Text explorer.current_dir(y = y):
     color = colorTheme.sKeyword
     bg = bg
   y += dy
 
-  if not expl.display_disk_list:
-    for i, file in expl.files.pairs:
+  if not explorer.display_disk_list:
+    for i, file in explorer.files.pairs:
       File file(y = y, h = dy):
-        selected = i == expl.item_index
+        selected = i == explorer.item_index
         bg = bg
       y += dy
 
   else:
-    for i, disk in expl.disk_list:
+    for i, disk in explorer.disk_list:
       Disk disk(y = y, h = dy):
-        selected = i == expl.item_index
+        selected = i == explorer.item_index
         bg = bg
       y += dy
