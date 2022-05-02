@@ -31,6 +31,7 @@ type
     files*: seq[File]
     display*: bool
     pos*: float32
+    visual_pos*: float32
 
 proc folderUpCmp*(x, y: File): int =
   if (x.info.kind, y.info.kind) == (PathComponent.pcFile, PathComponent.pcDir): 1
@@ -110,6 +111,7 @@ proc onButtonDown*(
       else: return
     
     explorer.item_index = 0
+    explorer.pos = 0
     explorer.current_dir = explorer.current_dir.parentDir
     
     explorer.updateDir path
@@ -154,9 +156,11 @@ proc onButtonDown*(
     let file = explorer.files[explorer.item_index]
 
     if file.info.kind == PathComponent.pcDir:
-        explorer.item_index = 0
-        explorer.current_dir = explorer.current_dir / file.name & file.ext
-        explorer.updateDir explorer.current_dir
+      explorer.item_index = 0
+      explorer.pos = 0
+      explorer.current_dir = explorer.current_dir / file.name & file.ext
+      explorer.updateDir explorer.current_dir
+      
 
   of KeyEnter:
     if explorer.display_disk_list:
@@ -230,7 +234,11 @@ component Explorer:
   )
 
   let dy = round(glyphTableStack[^1].font.size * 1.27)
-  var y = -dy * (explorer.pos mod 1)
+  
+  var 
+    gt = glyphTableStack[^1]
+    y = -dy * (explorer.pos mod 1)
+    size = (parentBox.h / gt.font.size).ceil.int
 
   #! sorted on each component rerender
   # todo: check if seq already sorted or take the sort to updateDir
@@ -243,10 +251,11 @@ component Explorer:
 
   if not explorer.display_disk_list:
     for i, file in explorer.files.pairs:
-      File file(y = y, h = dy):
-        selected = i == explorer.item_index
-        bg = bg
-      y += dy
+      if i in explorer.pos.int..explorer.pos.ceil.int+size:
+        File file(y = y, h = dy):
+          selected = i == explorer.item_index
+          bg = bg
+        y += dy
 
   else:
     for i, disk in explorer.disk_list:

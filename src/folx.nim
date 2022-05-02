@@ -51,7 +51,7 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
     pos = 0.0'f32
 
   var side_explorer = SideExplorer(current_dir: workspace, item_index: 1, display: false, pos: 0, y: 40, count_items: 0)
-  var explorer = Explorer(display_disk_list: false, current_dir: "", item_index: 0, files: @[], display: false, pos: 0)
+  var explorer = Explorer(display_disk_list: false, current_dir: "", item_index: 0, files: @[], display: false, pos: 0, visual_pos: 0)
   var title = Title(name: "")
 
   proc open_file(file: string) =
@@ -83,6 +83,26 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
         
         # if position changed, signal to display by setting result to true
         if pvp != (side_explorer.pos * fontSize).round.int32: result = true
+
+    if explorer.display:
+      if explorer.pos != explorer.visual_pos:
+        let
+          fontSize = editor_gt.font.size
+          pvp = (explorer.visual_pos * fontSize).round.int32  # visual position in pixels
+          
+          # position delta
+          d = (abs(explorer.pos - explorer.visual_pos) * pow(1 / 2, (1 / dt) / 50)).max(0.1).min(abs(pos - side_explorer.pos))
+
+        # move position by delta
+        if explorer.pos > explorer.visual_pos: explorer.visual_pos += d
+        else:                  explorer.visual_pos -= d
+
+        # if position close to integer number, round it
+        if abs(explorer.visual_pos - explorer.pos) < 1 / fontSize / 2.1:
+          explorer.visual_pos = explorer.pos
+        
+        # if position changed, signal to display by setting result to true
+        if pvp != (explorer.visual_pos * fontSize).round.int32: result = true
     
     if opened_files.len != 0:
       result = result or text_editor.animate(
@@ -104,7 +124,9 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
           bg = colorTheme.bgStatusBar
 
           fieldsStart = @[
-            ("Items", if explorer.display_disk_list: $explorer.disk_list.len else: $explorer.files.len)
+            ("Items", if explorer.display_disk_list: $explorer.disk_list.len else: $explorer.files.len),
+            ("Pos", $explorer.pos)
+            
           ]
 
           fieldsEnd = @[]
@@ -215,6 +237,11 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
           text_editor.onScroll(
             delta = window.scrollDelta,
           )
+
+      elif explorer.display:
+
+        let lines_count = if explorer.display_disk_list: explorer.disk_list.len else: explorer.files.len
+        explorer.pos = (explorer.pos - window.scrollDelta.y * 3).max(0).min(lines_count.float32)
       
       elif opened_files.len != 0:
         text_editor.onScroll(
