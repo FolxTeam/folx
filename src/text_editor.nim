@@ -108,9 +108,8 @@ component TextArea {.noexport.}:
   )
 
   let
-    box = parentBox
     gt = glyphTableStack[^1]
-    size = (box.h / gt.font.size).ceil.int
+    size = (parentBox.h / gt.font.size).ceil.int
     space_w = static(" ".toRunes).width(gt)
 
     dy = round(gt.font.size * 1.27)
@@ -123,7 +122,7 @@ component TextArea {.noexport.}:
         colors = colors.toOpenArray(text.lines[i].first, text.lines[i].last)
         bg = bg
 
-      var x = box.x.round.int
+      var x = 0
       for i, l in indentation[i].len:
         VerticalLine(x=x, y=y, h=dy):
           color = colorTheme.bgVerticalLine
@@ -141,11 +140,9 @@ component LineNumbers {.noexport.}:
   )
 
   let
-    box = parentBox
     gt = glyphTableStack[^1]
-    size = (box.h / gt.font.size).ceil.int
+    size = (parentBox.h / gt.font.size).ceil.int
     dy = round(gt.font.size * 1.27)
-    right = (box.w + toRunes($lineCount).width(gt).float32) / 2
 
   var y = round(-gt.font.size * 1.27 * (pos mod 1))
   for i in (pos.int..pos.ceil.int+size).bound(0..<lineCount):
@@ -156,13 +153,13 @@ component LineNumbers {.noexport.}:
       Rect(y=y, h=dy):
         color = colorTheme.bgLineNumbersSelect
 
-    Text s(x=right-w, y=y):
+    Text s(left = parentBox.w - 10 - w, y = y, h = dy):
       color = sLineNumber.color
       bg =
         if i == cursor.y: colorTheme.bgLineNumbersSelect
         else: bg
 
-    y += round(gt.font.size * 1.27)
+    y += dy
 
 
 component ScrollBar {.noexport.}:

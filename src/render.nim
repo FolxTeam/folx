@@ -161,11 +161,27 @@ proc `[]`(gt: GlyphTable, c: Rune; fg, bg: ColorRgb): Image =
 
 proc width*(text: openarray[Rune], gt: GlyphTable): int32 =
   ## get width of text in pixels for font, specified in gt
-  gt.font.layoutBounds($text).x.int32
+  const black = rgb(0, 0, 0) 
+  
+  for c in text:
+    let glyph = gt[c, black, black]
+    
+    if glyph == nil:
+      continue
+
+    result += glyph.width.int32
 
 proc width*(text: string, gt: GlyphTable): int32 =
   ## get width of text in pixels for font, specified in gt
-  gt.font.layoutBounds(text).x.int32
+  const black = rgb(0, 0, 0) 
+  
+  for c in text.runes:
+    let glyph = gt[c, black, black]
+    
+    if glyph == nil:
+      continue
+
+    result += glyph.width.int32
 
 
 component Text:
@@ -176,9 +192,9 @@ component Text:
     bg: ColorRgb,
   )
   let gt = glyphTableStack[^1]
-  auto w: gt.font.layoutBounds($text).x
-  auto h: gt.font.layoutBounds($text).y
-  auto wh: gt.font.layoutBounds($text)
+  auto w: text.width(gt).float32
+  auto h: gt.font.size
+  auto wh: vec2(text.width(gt).float32, gt.font.size)
 
   assert text.len == colors.len
   let
@@ -213,9 +229,10 @@ component Text:
     colors: openarray[ColorRgb],
     bg: ColorRgb,
   )
-  auto w: glyphTableStack[^1].font.layoutBounds(text).x
-  auto h: glyphTableStack[^1].font.layoutBounds(text).y
-  auto wh: glyphTableStack[^1].font.layoutBounds(text)
+  let gt = glyphTableStack[^1]
+  auto w: text.width(gt).float32
+  auto h: gt.font.size
+  auto wh: vec2(text.width(gt).float32, gt.font.size)
   
   Text text.toRunes:
     colors = colors
@@ -229,9 +246,10 @@ component Text:
     color: ColorRgb,
     bg: ColorRgb,
   )
-  auto w: glyphTableStack[^1].font.layoutBounds($text).x
-  auto h: glyphTableStack[^1].font.layoutBounds($text).y
-  auto wh: glyphTableStack[^1].font.layoutBounds($text)
+  let gt = glyphTableStack[^1]
+  auto w: text.width(gt).float32
+  auto h: gt.font.size
+  auto wh: vec2(text.width(gt).float32, gt.font.size)
   
   Text text:
     colors = color.repeat(text.len)
@@ -245,9 +263,10 @@ component Text:
     color: ColorRgb,
     bg: ColorRgb,
   )
-  auto w: glyphTableStack[^1].font.layoutBounds(text).x
-  auto h: glyphTableStack[^1].font.layoutBounds(text).y
-  auto wh: glyphTableStack[^1].font.layoutBounds(text)
+  let gt = glyphTableStack[^1]
+  auto w: text.width(gt).float32
+  auto h: gt.font.size
+  auto wh: vec2(text.width(gt).float32, gt.font.size)
   
   Text text:
     colors = color.repeat(text.runeLen)
