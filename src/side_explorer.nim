@@ -154,9 +154,9 @@ component Item {.noexport.}:
     gt = glyphTableStack[^1]
     dy = round(gt.font.size * 1.40)
 
-  updateExplorer(explorer, file)
-
   if selected:
+    updateExplorer(explorer, file)
+
     Rect: color = colorTheme.bgSelection
     Rect(w = 2): color = colorTheme.bgSelectionLabel
   
@@ -187,6 +187,7 @@ component Title {.noexport.}:
     bg = colorTheme.bgExplorer
   explorer.y += dy
 
+
 component SideExplorer:
   proc handle(
     explorer: var SideExplorer,
@@ -205,12 +206,13 @@ component SideExplorer:
     count_items = explorer.count_items
     pos = explorer.pos
 
-  Rect: color = colorTheme.bgExplorer
-
+  
   if nesting == 0:
-    explorer.y = 40
+    explorer.y = 0
     count_items = 0
     explorer.count_items = 0
+
+    Rect: color = colorTheme.bgExplorer
     
     Title(h = dy * 2):
       explorer = explorer
@@ -253,7 +255,7 @@ component SideExplorer:
 
         explorer.count_items = count_items
 
-        SideExplorer explorer(x = parentBox.x, y = parentBox.y, w = parentBox.w, h = parentBox.h):
+        SideExplorer explorer(top = 0, bottom = 0, w = 260):
           dir = dir.files[i]
           nesting = nesting + 1
         
