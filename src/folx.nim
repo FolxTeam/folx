@@ -94,8 +94,20 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
   component Folx {.noexport.}:
     if explorer.display:
       withGlyphTable interface_gt:
-        Explorer explorer(right = 10, bottom = 20):
+        TitleBar(w = window.size.vec2.x, h = 40):
+          discard
+
+        Explorer explorer(top = 40, right = 10, bottom = 20):
           bg = colorTheme.bgTextArea
+
+        StatusBar(top = window.size.vec2.y - 20):
+          bg = colorTheme.bgStatusBar
+
+          fieldsStart = @[
+            ("Items", if explorer.display_disk_list: $explorer.disk_list.len else: $explorer.files.len)
+          ]
+
+          fieldsEnd = @[]
 
     elif side_explorer.display:
       withGlyphTable editor_gt:
