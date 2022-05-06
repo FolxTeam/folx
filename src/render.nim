@@ -192,9 +192,6 @@ component Text:
     bg: ColorRgb,
   )
   let gt = glyphTableStack[^1]
-  auto w: text.width(gt).float32
-  auto h: gt.font.size
-  auto wh: vec2(text.width(gt).float32, gt.font.size)
 
   assert text.len == colors.len
   let
@@ -229,10 +226,6 @@ component Text:
     colors: openarray[ColorRgb],
     bg: ColorRgb,
   )
-  let gt = glyphTableStack[^1]
-  auto w: text.width(gt).float32
-  auto h: gt.font.size
-  auto wh: vec2(text.width(gt).float32, gt.font.size)
   
   Text text.toRunes:
     colors = colors
@@ -246,10 +239,6 @@ component Text:
     color: ColorRgb,
     bg: ColorRgb,
   )
-  let gt = glyphTableStack[^1]
-  auto w: text.width(gt).float32
-  auto h: gt.font.size
-  auto wh: vec2(text.width(gt).float32, gt.font.size)
   
   Text text:
     colors = color.repeat(text.len)
@@ -263,10 +252,6 @@ component Text:
     color: ColorRgb,
     bg: ColorRgb,
   )
-  let gt = glyphTableStack[^1]
-  auto w: text.width(gt).float32
-  auto h: gt.font.size
-  auto wh: vec2(text.width(gt).float32, gt.font.size)
   
   Text text:
     colors = color.repeat(text.runeLen)

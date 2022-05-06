@@ -1,6 +1,5 @@
 import options, os, math, algorithm, times
-import pixwindy, pixie
-import render, configuration, markup
+import gui, configuration
 
 when defined(windows):
   import winim/com
@@ -15,7 +14,7 @@ when defined(windows):
           list.add(disk.deviceid)
     return list
 
-type 
+type
   File* = object
     path*: string
     dir*: string
@@ -96,16 +95,15 @@ proc updateDir*(explorer: var Explorer, path: string) =
       explorer.files.add(file_type.get())
 
 
-proc onButtonDown*(
+proc onKeydown*(
   explorer: var Explorer,
-  button: Button,
+  e: KeyEvent,
   path: string,
   window: Window,
   onWorkspaceOpen: proc(path: string)
   ) =
-  case button
-  
-  of KeyLeft:
+  case e.key
+  of Key.left:
     if explorer.current_dir.isRootDir():
       when defined(linux): return
       elif defined(windows):
@@ -120,7 +118,7 @@ proc onButtonDown*(
     
     explorer.updateDir path
     
-  of KeyUp:
+  of Key.up:
     if explorer.display_disk_list:
       if explorer.item_index > 0:
         dec explorer.item_index
@@ -135,7 +133,7 @@ proc onButtonDown*(
       if explorer.files.len != 0:
         explorer.item_index = explorer.files.high  # cycle
   
-  of KeyDown:
+  of Key.down:
     if explorer.display_disk_list:
       if explorer.item_index < explorer.disk_list.high:
         inc explorer.item_index
@@ -148,7 +146,7 @@ proc onButtonDown*(
     else:
       explorer.item_index = 0
 
-  of KeyRight:
+  of Key.right:
     if explorer.item_index notin 0..explorer.files.high: return
 
     if explorer.display_disk_list:
@@ -166,7 +164,7 @@ proc onButtonDown*(
       explorer.updateDir explorer.current_dir
       
 
-  of KeyEnter:
+  of Key.enter:
     if explorer.display_disk_list:
       explorer.current_dir = explorer.disk_list[explorer.item_index]
       explorer.display_disk_list = false

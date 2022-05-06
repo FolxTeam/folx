@@ -1,6 +1,6 @@
 import sequtils, os, times, math, unicode, std/monotimes, options
 import cligen
-import render, configuration, git, text, text_editor, side_explorer, explorer, title, status_bar, welcome
+import gui, configuration, git, text, text_editor, side_explorer, explorer, title, status_bar, welcome
 
 proc contains*(b: Rect, a: GVec2): bool =
   let a = a.vec2
@@ -231,7 +231,7 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
         
         elif opened_files.len != 0:
           text_editor.onScroll(
-            delta = e.delta,
+            delta = vec2(0, e.delta),
           )
 
       elif explorer.display:
@@ -241,7 +241,7 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
       
       elif opened_files.len != 0:
         text_editor.onScroll(
-          delta = e.delta,
+          delta = vec2(0, e.delta),
         )
 
 
@@ -281,7 +281,7 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
         )
 
     elif side_explorer.display:
-      side_explorer.onButtonDown(
+      side_explorer.onKeydown(
         e = e,
         path = config.file,
         onFileOpen = (proc(file: string) =
@@ -290,7 +290,7 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
       )
     
     elif explorer.display:
-      explorer.onButtonDown(
+      explorer.onKeydown(
         e = e,
         path = config.file,
         window = window,
@@ -305,7 +305,7 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
       )
 
     elif opened_files.len != 0:
-      text_editor.onButtonDown(
+      text_editor.onKeydown(
         e = e,
         window = window,
         onTextChange = (proc = 
@@ -315,15 +315,17 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
           window.title = text_editor.file & " - folx"
         ),
       )
-    
-    title.onButtonDown(
+
+    redraw window
+  
+  window.onMouseDown = proc(e: MouseButtonEvent) =
+    title.onMouseDown(
       e = e,
       window = window,
       explorer = explorer,
       side_explorer = side_explorer,
       pos = pos,
     )
-
     redraw window
 
   window.onTextInput = proc(e: TextInputEvent) =

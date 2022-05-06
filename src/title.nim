@@ -1,5 +1,4 @@
-import pixwindy, pixie
-import render, configuration, markup
+import gui, configuration
 import explorer, side_explorer
 
 type 
@@ -12,50 +11,45 @@ var
 
 proc onMouseMove*(
   title: var Title,
-  window: Window,
+  window: var Window,
   ) =
   if config.window.customTitleBar:
-    if window.buttonDown[MouseLeft]:
-      if window.mousePos.x >= 260 and window.mousePos.x < window.size.x - 150 and
-        window.mousePos.y >= 0 and window.mousePos.y <= 40:
+    if window.mouse.pressed[MouseButton.left]:
+      if window.mouse.pos.x >= 260 and window.mouse.pos.x < window.size.x - 150 and
+        window.mouse.pos.y >= 0 and window.mouse.pos.y <= 40:
         mouseMove = true
-        if oldPosition == ivec2(0,0):
-          oldPosition = window.mousePos
+        if oldPosition == ivec2(0, 0):
+          oldPosition = window.mouse.pos.ivec2
       else:
         if oldPosition == ivec2(0,0):
           mouseMove = false
       if mouseMove:
-        var newPosition: IVec2 = window.mousePos - oldPosition
-        window.pos = ivec2(window.pos.x + newPosition.x, window.pos.y + newPosition.y)
+        let newPosition: IVec2 = window.mouse.pos.ivec2 - oldPosition
+        window.pos = (window.pos.x + newPosition.x, window.pos.y + newPosition.y)
     else:
       oldPosition = ivec2(0,0)
   
-proc onButtonDown*(
+proc onMouseDown*(
   title: var Title,
-  button: Button,
+  e: MouseButtonEvent,
   window: Window,
   explorer: var Explorer,
   side_explorer: var SideExplorer,
   pos: var float32
   ) =
-
-  case button
-  of MouseLeft:
+  case e.button:
+  of MouseButton.left:
     if config.window.customTitleBar:
-      if window.mousePos.x >= window.size.x - 50 and window.mousePos.x < window.size.x and
-        window.mousePos.y >= 0 and window.mousePos.y <= 40:
+      if window.mouse.pos.x >= window.size.x - 50 and window.mouse.pos.x < window.size.x and window.mouse.pos.y >= 0 and window.mouse.pos.y <= 40:
         quit()
       
-      if window.mousePos.x >= window.size.x - 100 and window.mousePos.x < window.size.x - 50 and
-        window.mousePos.y >= 0 and window.mousePos.y <= 40:
-        window.maximized = not window.maximized
+      if window.mouse.pos.x >= window.size.x - 100 and window.mouse.pos.x < window.size.x - 50 and window.mouse.pos.y >= 0 and window.mouse.pos.y <= 40:
+        ## todo: window.maximized = not window.maximized
       
-      if window.mousePos.x >= window.size.x - 150 and window.mousePos.x < window.size.x - 100 and
-        window.mousePos.y >= 0 and window.mousePos.y <= 40:
-        window.minimized = not window.minimized
+      if window.mouse.pos.x >= window.size.x - 150 and window.mouse.pos.x < window.size.x - 100 and window.mouse.pos.y >= 0 and window.mouse.pos.y <= 40:
+        ## todo: window.minimized = not window.minimized
 
-      if window.mousePos.x >= 0 and window.mousePos.x < 65 and
-        window.mousePos.y >= 0 and window.mousePos.y <= 40:
+      if window.mouse.pos.x >= 0 and window.mouse.pos.x < 65 and window.mouse.pos.y >= 0 and window.mouse.pos.y <= 40:
 
         explorer.display = false
         side_explorer.display = not side_explorer.display

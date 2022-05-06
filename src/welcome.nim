@@ -1,5 +1,4 @@
-import pixwindy, pixie
-import render, configuration
+import gui, configuration
 
 component Item {.noexport.}:
   proc handle(

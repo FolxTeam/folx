@@ -331,7 +331,7 @@ proc reparse(editor: var TextEditor) =
   editor.indentation = editor.text.indentation
 
 
-proc onButtonDown*(
+proc onKeydown*(
   editor: var TextEditor,
   e: KeyEvent,
   window: Window,

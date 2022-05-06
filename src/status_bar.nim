@@ -1,6 +1,5 @@
 import std/unicode, strformat
-import pixwindy, pixie
-import render, configuration, markup
+import gui, configuration
 
 component StatusBar:
   proc handle(

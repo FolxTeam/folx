@@ -1,6 +1,5 @@
 import std/sequtils, os, std/unicode, math, std/algorithm
-import pixwindy, pixie
-import render, configuration, markup
+import gui, configuration
 
 type 
   File* = object
@@ -103,27 +102,26 @@ proc updateDir*(explorer: var SideExplorer, path: string) =
     info: info,
   )
 
-proc onButtonDown*(
+proc onKeydown*(
   explorer: var SideExplorer,
-  button: Button,
+  e: KeyEvent,
   path: string,
   onFileOpen: proc(file: string)
   ) =
-  case button
-  
-  of KeyLeft:
+  case e.key
+  of Key.left:
     if explorer.current_item == PathComponent.pcDir:
       explorer.open_dirs = explorer.open_dirs.filterIt(it != OpenDir(path: explorer.current_item_path / explorer.current_item_name & explorer.current_item_ext))
     
-  of KeyUp:
+  of Key.up:
     if explorer.item_index > 1:
       dec explorer.item_index
   
-  of KeyDown:
+  of Key.down:
     if explorer.item_index < explorer.count_items:
       inc explorer.item_index
 
-  of KeyRight:
+  of Key.right:
     if explorer.current_item == PathComponent.pcFile:
       onFileOpen(explorer.current_item_path / explorer.current_item_name & explorer.current_item_ext)
     elif explorer.current_item == PathComponent.pcDir:
