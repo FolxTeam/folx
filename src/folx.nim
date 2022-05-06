@@ -31,10 +31,11 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
 
   if preferWorkFolderResources: configuration.workFolderResources()
   
-  let window = newWindow("folx", config.window.size, visible=false)
-  window.runeInputEnabled = true
-
-  if config.window.customTitleBar: window.style = Undecorated
+  var window = newWindow(
+    title="folx", w=config.window.size.x, h=config.window.size.y,
+    frameless = if config.window.customTitleBar: true else: false,
+    transparent = if config.window.customTitleBar: true else: false,
+  )
 
   var
     editor_gt    = readFont(rc config.font).newGlyphTable(config.fontSize)
@@ -199,69 +200,63 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
           ]
 
 
-  proc display =
+  window.onRender = proc(e: RenderEvent) =
     image.clear colorTheme.bgTextArea.color.rgbx
 
-    frame(wh = window.size, clip=true):
+    frame(w = window.size.x, h = window.size.y, clip=true):
       withContext r:
         handleFolx()
 
-    window.draw image
+    window.drawImage image.data
 
 
-  window.onCloseRequest = proc =
-    close window
-    quit(0)
-
-
-  window.onScroll = proc =
-    if window.scrollDelta.y == 0: return
-    if window.buttonDown[KeyLeftControl] or window.buttonDown[KeyRightControl]:
-      let newSize = (editor_gt.font.size * (pow(17 / 16, window.scrollDelta.y))).round.max(1)
+  window.onScroll = proc(e: ScrollEvent) =
+    if e.delta == 0: return
+    if Key.lcontrol in window.keyboard.pressed or Key.rcontrol in window.keyboard.pressed:
+      let newSize = (editor_gt.font.size * (pow(17 / 16, e.delta))).round.max(1)
       
       if editor_gt.font.size != newSize:
         editor_gt.font.size = newSize
       else:
-        editor_gt.font.size = (editor_gt.font.size + window.scrollDelta.y).max(1)
+        editor_gt.font.size = (editor_gt.font.size + e.delta).max(1)
       
       clear editor_gt
       displayRequest = true
 
     else:
       if side_explorer.display:
-        if window.mousePos in rect(vec2(0, 0), vec2(260, window.size.vec2.y)):
+        if window.mouse.pos.vec2 in rect(vec2(0, 0), vec2(260, window.size.vec2.y)):
           let lines_count = side_explorer.count_items.float32
-          pos = (pos - window.scrollDelta.y * 3).max(0).min(lines_count)
+          pos = (pos - e.delta * 3).max(0).min(lines_count)
         
         elif opened_files.len != 0:
           text_editor.onScroll(
-            delta = window.scrollDelta,
+            delta = e.delta,
           )
 
       elif explorer.display:
 
         let lines_count = if explorer.display_disk_list: explorer.disk_list.len else: explorer.files.len
-        explorer.pos = (explorer.pos - window.scrollDelta.y * 3).max(0).min(lines_count.float32)
+        explorer.pos = (explorer.pos - e.delta * 3).max(0).min(lines_count.float32)
       
       elif opened_files.len != 0:
         text_editor.onScroll(
-          delta = window.scrollDelta,
+          delta = e.delta,
         )
 
 
-  window.onResize = proc =
+  window.onResize = proc(e: ResizeEvent) =
     if window.size.x * window.size.y == 0: return
     image = newImage(window.size.x, window.size.y)
     r = image.newContext
-    display()
 
-  window.onMouseMove = proc() =
+  window.onMouseMove = proc(e: MouseMoveEvent) =
     title.onMouseMove(
       window = window
     )
 
-  window.onButtonPress = proc(button: Button) =
-    if window.buttonDown[KeyLeftControl] and button == KeyE:
+  window.onKeydown = proc(e: KeyEvent) =
+    if e.check kc({Key.lcontrol}, Key.e):
       explorer.display = false
       side_explorer.display = not side_explorer.display
       
@@ -269,25 +264,25 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
         pos = side_explorer.pos
         side_explorer.updateDir config.file
 
-    elif window.buttonDown[KeyLeftControl] and button == KeyO:
+    elif e.check kc({Key.lcontrol}, Key.o):
       side_explorer.display = false
       explorer.display = not explorer.display
       
       if explorer.display:
         explorer.updateDir config.file
     
-    elif window.buttonDown[KeyLeftControl] and button == KeyV:
+    elif e.check kc({Key.lcontrol}, Key.v):
       if not side_explorer.display and opened_files.len != 0:
         text_editor.onPaste(
-          text = newText(getClipboardString()),
+          text = newText($clipboard),
           onTextChange = (proc =
-            display()
+            redraw window
           )
         )
 
     elif side_explorer.display:
       side_explorer.onButtonDown(
-        button = button,
+        e = e,
         path = config.file,
         onFileOpen = (proc(file: string) =
           open_file file
@@ -296,7 +291,7 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
     
     elif explorer.display:
       explorer.onButtonDown(
-        button = button,
+        e = e,
         path = config.file,
         window = window,
         onWorkspaceOpen = (proc(path: string) =
@@ -311,7 +306,7 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
 
     elif opened_files.len != 0:
       text_editor.onButtonDown(
-        button = button,
+        e = e,
         window = window,
         onTextChange = (proc = 
           window.title = text_editor.file & "* - folx"
@@ -322,57 +317,44 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
       )
     
     title.onButtonDown(
-      button = button, 
+      e = e,
       window = window,
       explorer = explorer,
       side_explorer = side_explorer,
       pos = pos,
     )
 
-    display()
+    redraw window
 
-  window.onRune = proc(rune: Rune) =
-    if window.buttonDown[KeyLeftSuper] or window.buttonDown[KeyRightSuper]: return
+  window.onTextInput = proc(e: TextInputEvent) =
+    if Key.lsystem in window.keyboard.pressed or Key.rsystem in window.keyboard.pressed: return
 
     if not side_explorer.display and opened_files.len != 0:
       text_editor.onRuneInput(
-        rune = rune,
+        rune = e.text.runeAt(0),
         onTextChange = (proc =
-          display()
+          redraw window
           window.title = text_editor.file & "* - folx"
         )
       )
 
-  window.visible = true
-  display()
-
-  var pt = getMonoTime()  # main clock
-  while not window.closeRequested:
+  window.onTick = proc(e: TickEvent) =
     # blink timeout
+    # todo: use delta time
     if config.caretBlink:
-      if blink_time > 35: 
+      if blink_time > 35:
         blink = not blink
         blink_time = 0
-        display()
-      else: 
+        redraw window
+      else:
         blink_time += 1
 
-    let nt = getMonoTime()  # tick start time
-    pollEvents()
-    
-    let dt = getMonoTime()
-    # animate
-    displayRequest = displayRequest or animate((dt - pt).inMicroseconds.int / 1_000_000)
+    if animate((e.deltaTime).inMicroseconds.int / 1_000_000):
+      redraw window
 
     if displayRequest:
-      display()
-      displayRequest = false
-    
-    pt = dt  # update main clock
+      redraw window
 
-    # sleep when no events happen
-    let ct = getMonoTime()
-    if (ct - nt).inMilliseconds < 10:
-      sleep(10 - (ct - nt).inMilliseconds.int)
+  run window
 
 dispatch folx

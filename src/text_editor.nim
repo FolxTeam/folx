@@ -1,5 +1,5 @@
 import sequtils, unicode, math
-import render, syntax_highlighting, configuration, text
+import gui, syntax_highlighting, configuration, text
 
 type
   Indentation* = seq[tuple[len: seq[int], has_graph: bool]]
@@ -333,7 +333,7 @@ proc reparse(editor: var TextEditor) =
 
 proc onButtonDown*(
   editor: var TextEditor,
-  button: Button,
+  e: KeyEvent,
   window: Window,
   onTextChange: proc(),
   onTextSave: proc(),
@@ -344,32 +344,20 @@ proc onButtonDown*(
   blink_time = 0
   blink = true
 
-  case button
-  of KeyRight:
+  case e.key
+  of Key.right:
     moveRight editor.cursor, editor.text
   
-  of KeyLeft:
+  of Key.left:
     moveLeft editor.cursor, editor.text
   
-  of KeyDown:
+  of Key.down:
     moveDown editor.cursor, editor.text
   
-  of KeyUp:
+  of Key.up:
     moveUp editor.cursor, editor.text
   
-  of KeyHome:
-    if window.buttonDown[KeyLeftControl]:
-      moveToFileStart editor.cursor, editor.text, editor.pos
-    else:
-      moveToLineStart editor.cursor, editor.text
-
-  of KeyEnd:
-    if window.buttonDown[KeyLeftControl]:
-      moveToFileEnd editor.cursor, editor.text, editor.pos
-    else:
-      moveToLineEnd editor.cursor, editor.text
-  
-  of KeyBackspace:  # erase character before cursor
+  of Key.backspace:  # erase character before cursor
     bound editor.cursor, editor.text
 
     if editor.cursor.x == 0:
@@ -392,7 +380,7 @@ proc onButtonDown*(
       reparse editor
       onTextChange()
   
-  of KeyDelete:  # erase character after cursor
+  of Key.del:  # erase character after cursor
     bound editor.cursor, editor.text
 
     if editor.cursor.x == editor.text{editor.cursor.y}.len.int32:
@@ -409,7 +397,7 @@ proc onButtonDown*(
       reparse editor
       onTextChange()
   
-  of KeyEnter:  # insert new line
+  of Key.enter:  # insert new line
     bound editor.cursor, editor.text
     editor.text.`\n` editor.cursor.x.int, editor.cursor.y.int
     inc editor.cursor.y
@@ -417,11 +405,22 @@ proc onButtonDown*(
     
     reparse editor
     onTextChange()
+
+  of Key.home:
+    if Key.lcontrol in e.keyboard.pressed:
+      moveToFileStart editor.cursor, editor.text, editor.pos
+    else:
+      moveToLineStart editor.cursor, editor.text
+
+  of Key.End:
+    if Key.lcontrol in e.keyboard.pressed:
+      moveToFileEnd editor.cursor, editor.text, editor.pos
+    else:
+      moveToLineEnd editor.cursor, editor.text
   
-  of KeyS:
-    if window.buttonDown[KeyLeftControl]:
-      writeFile editor.file, $editor.text
-      onTextSave()
+  elif e.check kc({Key.lcontrol}, Key.s):
+    writeFile editor.file, $editor.text
+    onTextSave()
   
   else: discard
 

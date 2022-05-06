@@ -1,8 +1,11 @@
 import macros, tables, unicode
-import pixwindy, pixie, fusion/matching, fusion/astdsl
-export pixwindy, pixie
+import pixie, fusion/matching, fusion/astdsl
+export pixie
 
 {.experimental: "caseStmtMacros".}
+
+proc ivec2*(v: (int, int)): IVec2 = ivec2(v[0].int32, v[1].int32)
+proc vec2*(v: (int, int)): Vec2 = vec2(v[0].float32, v[1].float32)
 
 var
   boxStack*: seq[Rect]
