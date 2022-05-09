@@ -6,7 +6,11 @@ type
   GlyphTable* = ref object
     ## table of pre-renered text images
     font*: Font
-    glyphs: Table[tuple[c: Rune; fg, bg: ColorRgb], Image]
+    glyphs: Table[tuple[c: Rune; fg, bg: ColorRgb], Glyph]
+  
+  Glyph = object
+    size: IVec2
+    data: seq[ColorRgbx]
 
 
 var
@@ -45,6 +49,34 @@ proc bound*(a, b: Rect): Rect =
 
 {.push, checks: off.}
 
+component Image {.noexport.}:
+  # image (unscaled)
+  proc handle(
+    g: Glyph,
+    srcPos: IVec2 = ivec2(0, 0),
+  )
+  let
+    pos1 = parentBox.xy.ivec2
+    size1 = parentBox.wh.ivec2
+    r = contextStack[^1].image
+
+  # clip
+  let pos2 = ivec2(max(-pos1.x, 0), max(-pos1.y, 0)) + srcPos
+  let pos = pos1 + pos2
+  let size = ivec2(
+    (size1.x - srcPos.x).min(g.size.x - pos2.x).min(r.width.int32 - pos.x),
+    (size1.y - srcPos.y).min(g.size.y - pos2.y).min(r.height.int32 - pos.y)
+  )
+  if size.x <= 0 or size.y <= 0: return
+
+  # draw
+  for y in 0..<size.y:
+    let
+      idst = (pos.y + y) * r.width + pos.x
+      isrc = (pos2.y + y) * g.size.x + pos2.x
+    for x in 0..<size.x:
+      r.data[idst + x] = g.data[isrc + x]
+
 component Image:
   # image (unscaled)
   proc handle(
@@ -67,13 +99,11 @@ component Image:
 
   # draw
   for y in 0..<size.y:
-    var
+    let
       idst = (pos.y + y) * r.width + pos.x
       isrc = (pos2.y + y) * g.width + pos2.x
-    for _ in 0..<size.x:
-      r.data[idst] = g.data[isrc]
-      inc isrc
-      inc idst
+    for x in 0..<size.x:
+      r.data[idst + x] = g.data[isrc + x]
 
 
 component VerticalLine:
@@ -121,67 +151,48 @@ proc clear*(image: Image, color: ColorRgbx) =
 {.pop.}
 
 
-proc render(c: Rune, font: Font; fg, bg: ColorRgb): Image =
+proc render(c: Rune, font: Font; fg, bg: ColorRgb): Glyph =
   ## renter text to image
+  if not font.typeface.hasGlyph(c) and c != static(" ".runeAt(0)):
+    return render(static(" ".runeAt(0)), font, fg, bg)
+
   let ts = font.typeset($c)
-  let bounds = font.layoutBounds($c)
-  if bounds.x < 1 or bounds.y < 1: return nil
-  result = newImage(bounds.x.ceil.int, bounds.y.ceil.int)
-  result.fill bg
+  let bounds = ts.layoutBounds
+  if bounds.x <= 0 or bounds.y <= 0: return
+  result.size = ivec2(bounds.x.ceil.int32, bounds.y.ceil.int32)
+  let img = newImage(result.size.x, result.size.y)
+  img.fill bg
   font.paint.color = fg.color
-  result.fillText(ts)
+  img.fillText(ts)
+  result.data = img.data
 
 proc render(gt: GlyphTable, c: Rune; fg, bg: ColorRgb) =
   ## pre-rener text and save it in table
-  let img = c.render(gt.font, fg, bg)
-  if img == nil:
-    gt.glyphs[(c, fg, bg)] = nil
-  else:
-    gt.glyphs[(c, fg, bg)] = img
+  gt.glyphs[(c, fg, bg)] = c.render(gt.font, fg, bg)
 
 func clear*(gt: GlyphTable) =
   clear gt.glyphs
 
-proc `[]`(gt: GlyphTable, c: Rune; fg, bg: ColorRgb): Image =
-  const space = " ".runeAt(0)
-
-  result =
-    try: gt.glyphs[(c, fg, bg)]
-    except KeyError:
-      gt.render(c, fg, bg)
-      gt.glyphs[(c, fg, bg)]
-  
-  if result == nil:
-    result = 
-      try: gt.glyphs[(space, fg, bg)]
-      except KeyError:
-        gt.render(space, fg, bg)
-        gt.glyphs[(space, fg, bg)]
+proc `[]`(gt: GlyphTable, c: Rune; fg, bg: ColorRgb): ptr Glyph =
+  try: gt.glyphs[(c, fg, bg)].addr
+  except KeyError:
+    gt.render(c, fg, bg)
+    gt.glyphs[(c, fg, bg)].addr
 
 
 proc width*(text: openarray[Rune], gt: GlyphTable): int32 =
   ## get width of text in pixels for font, specified in gt
-  const black = rgb(0, 0, 0) 
+  const white = rgb(255, 255, 255)
   
   for c in text:
-    let glyph = gt[c, black, black]
-    
-    if glyph == nil:
-      continue
-
-    result += glyph.width.int32
+    result += gt[c, white, white].size.x
 
 proc width*(text: string, gt: GlyphTable): int32 =
   ## get width of text in pixels for font, specified in gt
-  const black = rgb(0, 0, 0) 
+  const white = rgb(255, 255, 255)
   
   for c in text.runes:
-    let glyph = gt[c, black, black]
-    
-    if glyph == nil:
-      continue
-
-    result += glyph.width.int32
+    result += gt[c, white, white].size.x
 
 
 component Text:
@@ -202,18 +213,15 @@ component Text:
   let hd = max(box.y - parentBox.y, 0).round.int32
 
   for i, c in text:
-    let color = colors[i]
-    
-    let glyph = gt[c, color, bg]
-    
-    if glyph == nil:
-      continue
+    let
+      color = colors[i]
+      glyph = gt[c, color, bg]
+      bx = glyph.size.x
 
     if not c.isWhiteSpace:
-      Image glyph(x=x, y=y, w=w, h=h):
+      Image glyph[](x=x, y=y, w=w, h=h):
         srcPos = ivec2(0, hd)
 
-    let bx = glyph.width.int32
     x += bx
     w -= bx
     if w <= 0: return

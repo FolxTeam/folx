@@ -463,4 +463,4 @@ proc onScroll*(
   editor: var TextEditor,
   delta: Vec2,
 ) =
-  editor.pos = (editor.pos - delta.y * 3).max(0).min(editor.text.lines.len.float32)
+  editor.pos = (editor.pos + delta.y * 3).max(0).min(editor.text.lines.len.float32)

@@ -213,12 +213,12 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
   window.onScroll = proc(e: ScrollEvent) =
     if e.delta == 0: return
     if Key.lcontrol in window.keyboard.pressed or Key.rcontrol in window.keyboard.pressed:
-      let newSize = (editor_gt.font.size * (pow(17 / 16, e.delta))).round.max(1)
+      let newSize = (editor_gt.font.size * (pow(16 / 17, e.delta))).round.max(1)
       
       if editor_gt.font.size != newSize:
         editor_gt.font.size = newSize
       else:
-        editor_gt.font.size = (editor_gt.font.size + e.delta).max(1)
+        editor_gt.font.size = (editor_gt.font.size - e.delta).max(1)
       
       clear editor_gt
       displayRequest = true
@@ -227,7 +227,7 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
       if side_explorer.display:
         if window.mouse.pos.vec2 in rect(vec2(0, 0), vec2(260, window.size.vec2.y)):
           let lines_count = side_explorer.count_items.float32
-          pos = (pos - e.delta * 3).max(0).min(lines_count)
+          pos = (pos + e.delta * 3).max(0).min(lines_count)
         
         elif opened_files.len != 0:
           text_editor.onScroll(
@@ -237,7 +237,7 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
       elif explorer.display:
 
         let lines_count = if explorer.display_disk_list: explorer.disk_list.len else: explorer.files.len
-        explorer.pos = (explorer.pos - e.delta * 3).max(0).min(lines_count.float32)
+        explorer.pos = (explorer.pos + e.delta * 3).max(0).min(lines_count.float32)
       
       elif opened_files.len != 0:
         text_editor.onScroll(
