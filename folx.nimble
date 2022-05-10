@@ -7,7 +7,7 @@ license       = "MIT"
 srcDir        = "src"
 bin           = @["folx"]
 
-requires "nim >= 1.4.8"
+requires "nim >= 1.6.4"
 requires "siwin", "jsony", "pixie", "cligen", "fusion", "winim"
 
 

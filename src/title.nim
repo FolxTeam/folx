@@ -5,34 +5,19 @@ type
   Title* = object
     name*: string
 
-var 
-  mouseMove: bool = false
-  oldPosition: IVec2 = ivec2(0,0)
-
 proc onMouseMove*(
   title: var Title,
   window: var Window,
   ) =
   if config.window.customTitleBar:
     if window.mouse.pressed[MouseButton.left]:
-      if window.mouse.pos.x >= 260 and window.mouse.pos.x < window.size.x - 150 and
-        window.mouse.pos.y >= 0 and window.mouse.pos.y <= 40:
-        mouseMove = true
-        if oldPosition == ivec2(0, 0):
-          oldPosition = window.mouse.pos.ivec2
-      else:
-        if oldPosition == ivec2(0,0):
-          mouseMove = false
-      if mouseMove:
-        let newPosition: IVec2 = window.mouse.pos.ivec2 - oldPosition
-        window.pos = (window.pos.x + newPosition.x, window.pos.y + newPosition.y)
-    else:
-      oldPosition = ivec2(0,0)
+      if window.mouse.pos.y in 0..<40:
+        window.startInteractiveMove
   
 proc onMouseDown*(
   title: var Title,
   e: MouseButtonEvent,
-  window: Window,
+  window: var Window,
   explorer: var Explorer,
   side_explorer: var SideExplorer,
   pos: var float32
@@ -44,10 +29,10 @@ proc onMouseDown*(
         quit()
       
       if window.mouse.pos.x >= window.size.x - 100 and window.mouse.pos.x < window.size.x - 50 and window.mouse.pos.y >= 0 and window.mouse.pos.y <= 40:
-        ## todo: window.maximized = not window.maximized
+        window.maximized = not window.maximized
       
       if window.mouse.pos.x >= window.size.x - 150 and window.mouse.pos.x < window.size.x - 100 and window.mouse.pos.y >= 0 and window.mouse.pos.y <= 40:
-        ## todo: window.minimized = not window.minimized
+        window.minimized = not window.minimized
 
       if window.mouse.pos.x >= 0 and window.mouse.pos.x < 65 and window.mouse.pos.y >= 0 and window.mouse.pos.y <= 40:
 
