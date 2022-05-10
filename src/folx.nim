@@ -137,6 +137,7 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
         if opened_files.len != 0:
           TextEditor text_editor(left = 260, top = 40, bottom = 20):
             bg = colorTheme.bgTextArea
+            window = window
 
       withGlyphTable interface_gt:
         TitleBar(w = window.size.vec2.x, h = 40):
@@ -172,6 +173,7 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
         if opened_files.len != 0:
           TextEditor text_editor(top = 40, bottom = 20):
             bg = colorTheme.bgTextArea
+            window = window
 
       withGlyphTable interface_gt:
         TitleBar(w = window.size.vec2.x, h = 40):
@@ -252,8 +254,9 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
 
   window.onMouseMove = proc(e: MouseMoveEvent) =
     title.onMouseMove(
-      window = window
+      window = window,
     )
+    redraw window
 
   window.onKeydown = proc(e: KeyEvent) =
     if e.check kc({Key.lcontrol}, Key.e):

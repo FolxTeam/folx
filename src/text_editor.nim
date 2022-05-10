@@ -105,7 +105,14 @@ component TextArea {.noexport.}:
     text: Text,
     colors: seq[ColorRgb],
     indentation: Indentation,
+    window: var Window,
   )
+
+  if window.mouse.pos.x.float32 in parentBox.x..(parentBox.x + parentBox.w) and window.mouse.pos.y.float32 in parentBox.y..(parentBox.y + parentBox.h):
+    window.cursor = Cursor.text
+  else:
+    window.cursor = Cursor.arrow
+  # todo: not so stable
 
   let
     gt = glyphTableStack[^1]
@@ -219,6 +226,7 @@ component TextEditor:
   proc handle(
     editor: TextEditor,
     bg: ColorRgb,
+    window: var Window,
   )
 
   let
@@ -240,6 +248,7 @@ component TextEditor:
     text = editor.text
     colors = editor.colors
     indentation = editor.indentation
+    window = window
 
     Cursor:
       pos = editor.visual_pos
