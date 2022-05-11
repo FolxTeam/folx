@@ -204,12 +204,14 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
 
   window.onRender = proc(e: RenderEvent) =
     image.clear colorTheme.bgTextArea.color.rgbx
+    cursor = Cursor.arrow
 
     frame(w = window.size.x, h = window.size.y, clip=true):
       withContext r:
         handleFolx()
 
     window.drawImage image.data
+    window.cursor = cursor
 
 
   window.onScroll = proc(e: ScrollEvent) =

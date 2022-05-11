@@ -108,11 +108,8 @@ component TextArea {.noexport.}:
     window: var Window,
   )
 
-  if window.mouse.pos.x.float32 in parentBox.x..(parentBox.x + parentBox.w) and window.mouse.pos.y.float32 in parentBox.y..(parentBox.y + parentBox.h):
-    window.cursor = Cursor.text
-  else:
-    window.cursor = Cursor.arrow
-  # todo: not so stable
+  if window.mouse.pos in parentBox:
+    cursor = Cursor.text
 
   let
     gt = glyphTableStack[^1]
