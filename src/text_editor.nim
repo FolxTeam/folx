@@ -108,7 +108,7 @@ component TextArea {.noexport.}:
     window: var Window,
   )
 
-  if window.mouse.pos in parentBox:
+  if mouseHover parentBox:
     cursor = Cursor.text
 
   let
@@ -221,7 +221,7 @@ component Cursor:
 
 component TextEditor:
   proc handle(
-    editor: TextEditor,
+    editor: var TextEditor,
     bg: ColorRgb,
     window: var Window,
   )
@@ -246,6 +246,12 @@ component TextEditor:
     colors = editor.colors
     indentation = editor.indentation
     window = window
+
+    if isLeftDown and mouseHover parentBox:
+      let mousePos = mousePos - parentBox.xy
+      editor.cursor = ivec2((mousePos.x / (" ".width(gt)).float32).round.int32, (mousePos.y / round(gt.font.size * 1.27) + editor.visual_pos - 0.5).round.int32)
+      editor.cursor.y = editor.cursor.y.bound(0'i32..editor.text.lines.high.int32)
+      editor.cursor.x = editor.cursor.x.bound(0'i32..editor.text{editor.cursor.y}.len.int32)
 
     Cursor:
       pos = editor.visual_pos

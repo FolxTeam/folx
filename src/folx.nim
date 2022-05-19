@@ -127,7 +127,6 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
           fieldsStart = @[
             ("Items", if explorer.display_disk_list: $explorer.disk_list.len else: $explorer.files.len),
             ("Pos", $explorer.pos)
-            
           ]
 
           fieldsEnd = @[]
@@ -212,6 +211,9 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
 
     window.drawImage image.data
     window.cursor = cursor
+    isLeftClick = false
+    isLeftDown = false
+    isLeftUp = false
 
 
   window.onScroll = proc(e: ScrollEvent) =
@@ -323,14 +325,23 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
 
     redraw window
   
-  window.onMouseDown = proc(e: MouseButtonEvent) =
-    title.onMouseDown(
+  window.onClick = proc(e: ClickEvent) =
+    if e.button == MouseButton.left: isLeftClick = true
+    title.onClick(
       e = e,
       window = window,
       explorer = explorer,
       side_explorer = side_explorer,
       pos = pos,
     )
+    redraw window
+  
+  window.onMouseDown = proc(e: MouseButtonEvent) =
+    if e.button == MouseButton.left: isLeftDown = true
+    redraw window
+  
+  window.onMouseUp = proc(e: MouseButtonEvent) =
+    if e.button == MouseButton.left: isLeftUp = true
     redraw window
 
   window.onTextInput = proc(e: TextInputEvent) =
@@ -361,6 +372,8 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
 
     if displayRequest:
       redraw window
+    
+    mousePos = vec2(window.mouse.pos.x.float32, window.mouse.pos.y.float32)
 
   run window
 

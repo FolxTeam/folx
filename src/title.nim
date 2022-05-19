@@ -14,9 +14,9 @@ proc onMouseMove*(
       if window.mouse.pos.y in 0..<40:
         window.startInteractiveMove
   
-proc onMouseDown*(
+proc onClick*(
   title: var Title,
-  e: MouseButtonEvent,
+  e: ClickEvent,
   window: var Window,
   explorer: var Explorer,
   side_explorer: var SideExplorer,
