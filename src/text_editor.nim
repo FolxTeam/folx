@@ -232,12 +232,6 @@ component TextEditor:
     total = editor.text.lines.len
 
     line_number_width = float32 ($total).toRunes.width(gt)
-  
-  LineNumbers(w = line_number_width + 20):
-    pos = editor.visual_pos
-    bg = colorTheme.bgLineNumbers
-    lineCount = total
-    cursor = editor.cursor
 
   TextArea(left = line_number_width + 20, right = 10):
     pos = editor.visual_pos
@@ -257,6 +251,12 @@ component TextEditor:
       pos = editor.visual_pos
       cpos = editor.cursor
       text = editor.text
+  
+  LineNumbers(w = line_number_width + 20):
+    pos = editor.visual_pos
+    bg = colorTheme.bgLineNumbers
+    lineCount = total
+    cursor = editor.cursor
 
   ScrollBar(left = parentBox.w - 10):
     pos = editor.visual_pos

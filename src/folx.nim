@@ -113,11 +113,15 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
 
 
   component Folx {.noexport.}:
+    withGlyphTable interface_gt:
+      TitleBar(w = window.size.vec2.x, h = 40):
+        window = window
+        explorer = explorer
+        side_explorer = side_explorer
+        pos = pos
+
     if explorer.display:
       withGlyphTable interface_gt:
-        TitleBar(w = window.size.vec2.x, h = 40):
-          discard
-
         Explorer explorer(top = 40, right = 10, bottom = 20):
           bg = colorTheme.bgTextArea
 
@@ -139,9 +143,6 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
             window = window
 
       withGlyphTable interface_gt:
-        TitleBar(w = window.size.vec2.x, h = 40):
-          discard
-
         SideExplorer side_explorer(top = 40, bottom = 20, w = 260):
           dir = side_explorer.dir
 
@@ -175,9 +176,6 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
             window = window
 
       withGlyphTable interface_gt:
-        TitleBar(w = window.size.vec2.x, h = 40):
-          discard
-
         if opened_files.len == 0:
           Welcome(top = 40, bottom = 20):
             discard
@@ -327,13 +325,6 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
   
   window.onClick = proc(e: ClickEvent) =
     if e.button == MouseButton.left: isLeftClick = true
-    title.onClick(
-      e = e,
-      window = window,
-      explorer = explorer,
-      side_explorer = side_explorer,
-      pos = pos,
-    )
     redraw window
   
   window.onMouseDown = proc(e: MouseButtonEvent) =
