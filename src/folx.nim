@@ -31,8 +31,8 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
 
   if preferWorkFolderResources: configuration.workFolderResources()
   
-  var window = newWindow(
-    title="folx", w=config.window.size.x, h=config.window.size.y,
+  let window = newWindow(
+    title="folx", size=config.window.size,
     frameless = if config.window.customTitleBar: true else: false,
     transparent = if config.window.customTitleBar: true else: false,
   )
@@ -261,7 +261,7 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
     redraw window
 
   window.onKeydown = proc(e: KeyEvent) =
-    if e.check kc({Key.lcontrol}, Key.e):
+    if window.check(e, kc({Key.lcontrol}, Key.e)):
       explorer.display = false
       side_explorer.display = not side_explorer.display
       
@@ -269,14 +269,14 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
         pos = side_explorer.pos
         side_explorer.updateDir config.file
 
-    elif e.check kc({Key.lcontrol}, Key.o):
+    elif window.check(e, kc({Key.lcontrol}, Key.o)):
       side_explorer.display = false
       explorer.display = not explorer.display
       
       if explorer.display:
         explorer.updateDir config.file
     
-    elif e.check kc({Key.lcontrol}, Key.v):
+    elif window.check(e, kc({Key.lcontrol}, Key.v)):
       if not side_explorer.display and opened_files.len != 0:
         text_editor.onPaste(
           text = newText($clipboard),

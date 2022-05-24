@@ -7,7 +7,7 @@ type
 
 proc onMouseMove*(
   title: var Title,
-  window: var Window,
+  window: Window,
   ) =
   if config.window.customTitleBar:
     if window.mouse.pressed[MouseButton.left]:
@@ -31,7 +31,7 @@ component TitleBarButton {.noexport.}:
 
 component TitleBar:
   proc handle(
-    window: var Window,
+    window: Window,
     explorer: var Explorer,
     side_explorer: var SideExplorer,
     pos: var float32,

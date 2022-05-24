@@ -105,7 +105,7 @@ component TextArea {.noexport.}:
     text: Text,
     colors: seq[ColorRgb],
     indentation: Indentation,
-    window: var Window,
+    window: Window,
   )
 
   if mouseHover parentBox:
@@ -223,7 +223,7 @@ component TextEditor:
   proc handle(
     editor: var TextEditor,
     bg: ColorRgb,
-    window: var Window,
+    window: Window,
   )
 
   let
@@ -419,18 +419,18 @@ proc onKeydown*(
     onTextChange()
 
   of Key.home:
-    if Key.lcontrol in e.keyboard.pressed:
+    if Key.lcontrol in window.keyboard.pressed:
       moveToFileStart editor.cursor, editor.text, editor.pos
     else:
       moveToLineStart editor.cursor, editor.text
 
   of Key.End:
-    if Key.lcontrol in e.keyboard.pressed:
+    if Key.lcontrol in window.keyboard.pressed:
       moveToFileEnd editor.cursor, editor.text, editor.pos
     else:
       moveToLineEnd editor.cursor, editor.text
   
-  elif e.check kc({Key.lcontrol}, Key.s):
+  elif window.check(e, kc({Key.lcontrol}, Key.s)):
     writeFile editor.file, $editor.text
     onTextSave()
   
