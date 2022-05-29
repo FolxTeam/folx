@@ -39,6 +39,6 @@ component StatusBar:
     x -= spacing + w.float32
 
     if i.field == "git":
-      let wh = vec2(iconTheme.git.width.float32, iconTheme.git.height.float32)
-      Image iconTheme.git(x = x, y = 2, wh = wh)
+      frame(verticalCenterIn = parentBox, x = x, w = iconTheme.git.width, h = iconTheme.git.height):
+        contextStack[^1].image.draw(iconTheme.gitbranch, translate(parentBox.xy) * scale(vec2(0.65, 0.65)))
       x -= spacing
