@@ -145,6 +145,7 @@ component Item {.noexport.}:
     icon_const: float32,
     count_item: int,
     selected: bool,
+    open_file: proc(file: string)
   )
 
   let
@@ -157,6 +158,16 @@ component Item {.noexport.}:
 
     Rect: color = colorTheme.bgSelection
     Rect(w = 2): color = colorTheme.bgSelectionLabel
+
+  if isLeftClick and mouseHover parentBox:
+    if file.info.kind == PathComponent.pcFile:
+      open_file(file.path / file.name & file.ext)
+    elif file.info.kind == PathComponent.pcDir:
+      if OpenDir(path: file.path / file.name & file.ext) in explorer.open_dirs:
+        explorer.open_dirs = explorer.open_dirs.filterIt(it != OpenDir(path: file.path / file.name & file.ext))
+      else:
+        explorer.open_dirs.add(OpenDir(path: file.path / file.name & file.ext))
+    explorer.item_index = count_item 
   
   contextStack[^1].image.draw(getIcon(explorer, file), translate(vec2(box.x + 20 + nesting_indent.float32 * 20, box.y + 4)) * scale(vec2(icon_const * dy, icon_const * dy)))
 
@@ -191,6 +202,7 @@ component SideExplorer:
     explorer: var SideExplorer,
     dir: File,
     nesting: int32 = 0,
+    onFileOpen: proc(file: string)
   )
 
   var box = parentBox
@@ -245,6 +257,9 @@ component SideExplorer:
         icon_const = icon_const
         count_item = count_items
         selected = count_items == int(explorer.item_index)
+        open_file = (proc(file: string) =
+          onFileOpen file
+        )
     
     if file.info.kind == PathComponent.pcDir:
       if OpenDir(path: file.path / file.name & file.ext) in explorer.open_dirs:
@@ -256,6 +271,10 @@ component SideExplorer:
         SideExplorer explorer(top = 0, bottom = 0, w = 260):
           dir = dir.files[i]
           nesting = nesting + 1
+          onFileOpen = (proc(file: string) =
+            onFileOpen file
+          )
+          
         
         count_items = explorer.count_items
 

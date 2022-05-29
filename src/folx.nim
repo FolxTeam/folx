@@ -145,6 +145,9 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
       withGlyphTable interface_gt:
         SideExplorer side_explorer(top = 40, bottom = 20, w = 260):
           dir = side_explorer.dir
+          onFileOpen = (proc(file: string) =
+            open_file file
+          )
 
         if opened_files.len == 0:
           Welcome(left = 260, top = 40, bottom = 20):
