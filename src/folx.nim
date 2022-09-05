@@ -51,6 +51,8 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
     # for explorer
     pos = 0.0'f32
 
+    focusTextEditor = true
+
   var side_explorer = SideExplorer(current_dir: workspace, item_index: 1, display: false, pos: 0, y: 40, count_items: 0)
   var explorer = Explorer(display_disk_list: false, current_dir: "", item_index: 0, files: @[], display: false, pos: 0, visual_pos: 0)
   var title = Title(name: "")
@@ -119,6 +121,7 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
         explorer = explorer
         side_explorer = side_explorer
         pos = pos
+        focusTextEditor = focusTextEditor
 
     if explorer.display:
       withGlyphTable interface_gt:
@@ -141,6 +144,8 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
           TextEditor text_editor(left = 260, top = 40, bottom = 20):
             bg = colorTheme.bgTextArea
             window = window
+            if isLeftDown and mouseHover parentBox:
+              focusTextEditor = true
 
       withGlyphTable interface_gt:
         SideExplorer side_explorer(top = 40, bottom = 20, w = 260):
@@ -148,6 +153,9 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
           onFileOpen = (proc(file: string) =
             open_file file
           )
+
+          if isLeftDown and mouseHover parentBox:
+            focusTextEditor = false
 
         if opened_files.len == 0:
           Welcome(left = 260, top = 40, bottom = 20):
@@ -177,6 +185,8 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
           TextEditor text_editor(top = 40, bottom = 20):
             bg = colorTheme.bgTextArea
             window = window
+            if isLeftDown and mouseHover parentBox:
+              focusTextEditor = true
 
       withGlyphTable interface_gt:
         if opened_files.len == 0:
@@ -267,6 +277,7 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
     if window.check(e, kc({Key.lcontrol}, Key.e)):
       explorer.display = false
       side_explorer.display = not side_explorer.display
+      focusTextEditor = not side_explorer.display
       
       if side_explorer.display:
         pos = side_explorer.pos
@@ -288,7 +299,7 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
           )
         )
 
-    elif side_explorer.display:
+    elif side_explorer.display and not focusTextEditor:
       side_explorer.onKeydown(
         e = e,
         path = config.file,
@@ -341,7 +352,7 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
   window.onTextInput = proc(e: TextInputEvent) =
     if Key.lsystem in window.keyboard.pressed or Key.rsystem in window.keyboard.pressed: return
 
-    if not side_explorer.display and opened_files.len != 0:
+    if focusTextEditor and opened_files.len != 0:
       text_editor.onRuneInput(
         rune = e.text.runeAt(0),
         onTextChange = (proc =

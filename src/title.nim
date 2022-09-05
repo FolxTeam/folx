@@ -35,6 +35,7 @@ component TitleBar:
     explorer: var Explorer,
     side_explorer: var SideExplorer,
     pos: var float32,
+    focusTextEditor: var bool,
   )
   
   Rect: color = colorTheme.bgTitleBar
@@ -47,6 +48,7 @@ component TitleBar:
     if isLeftClick and mouseHover parentBox:
       explorer.display = false
       side_explorer.display = not side_explorer.display
+      focusTextEditor = not side_explorer.display
       
       if side_explorer.display:
         pos = side_explorer.pos
