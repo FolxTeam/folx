@@ -10,7 +10,7 @@ proc onMouseMove*(
   window: Window,
   ) =
   if config.window.customTitleBar:
-    if window.mouse.pressed[MouseButton.left]:
+    if MouseButton.left in window.mouse.pressed:
       if window.mouse.pos.y in 0..<40:
         window.startInteractiveMove
 
