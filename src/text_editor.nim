@@ -1,4 +1,4 @@
-import sequtils, unicode, math
+import sequtils, unicode, math, strutils
 import gui, syntax_highlighting, configuration, text
 
 type
@@ -412,8 +412,22 @@ proc onKeydown*(
   of Key.enter:  # insert new line
     bound editor.cursor, editor.text
     editor.text.`\n` editor.cursor.x.int, editor.cursor.y.int
-    inc editor.cursor.y
-    editor.cursor.x = 0
+    if window.check(e, kc({Key.lcontrol}, Key.enter)):
+      inc editor.cursor.y
+      editor.cursor.x = 0
+    else:
+      inc editor.cursor.y
+      editor.cursor.x = block:
+        var i = 0
+        block a:
+          for l in countdown(editor.cursor.y-1, 0):
+            for c in editor.text{l}:
+              if not c.isWhiteSpace:
+                break a
+              inc i
+            i = 0
+        i.int32
+      editor.text.insert(" ".repeat(editor.cursor.x).toRunes, 0, editor.cursor.y)
     
     reparse editor
     onTextChange()
