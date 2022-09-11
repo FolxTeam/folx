@@ -18,4 +18,5 @@ bindings/generated
 /config.default.json
 /resources/themes/default.json
 /build
+/build-*
 /local-experiments

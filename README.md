@@ -20,3 +20,14 @@ nimble install https://github.com/FolxTeam/folx
 <details><summary>Compile flags (write it after <code>nimble</code> but before <code>install</code>)</summary><p>
   <code>-u:useMalloc</code> - use nim <code>alloc</code> instead of c <code>malloc</code>
 </p></details>
+
+### Flatpak (from source code)
+to build
+```sh
+flatpak-builder --user --install --force-clean build-flatpak org.FolxTeam.folx.yml
+```
+to run
+```sh
+flatpak run org.FolxTeam.folx
+```
+todo: add folx to flathub repos
