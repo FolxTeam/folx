@@ -220,7 +220,7 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
       withContext r:
         handleFolx()
 
-    window.drawImage image.data
+    window.drawImage image.data.toBgrx, ivec2(image.width.int32, image.height.int32)
     window.cursor = cursor
     isLeftClick = false
     isLeftDown = false
