@@ -84,7 +84,7 @@ proc parseHook*[T](s: string, i: var int, v: var GVec2[T]) =
     parseHook(s, i, a)
     v.x = a[0]
     v.y = a[1]
-  except: discard
+  except CatchableError: discard
 
 proc dumpHook*[T](s: var string, v: GVec2[T]) =
   s.add [v.x, v.y].toJson
@@ -95,7 +95,7 @@ proc parseHook*(s: string, i: var int, v: var ColorRGB) =
     var str: string
     parseHook(s, i, str)
     v = parseHex(str).rgb
-  except: discard
+  except CatchableError: discard
 
 proc dumpHook*(s: var string, v: ColorRGB) =
   s.add v.color.toHex.toJson
@@ -189,11 +189,11 @@ proc rc*(file: string): string =
 
 proc readConfig*(file = configDir/"config.json"): Config =
   try:    file.readFile.fromJson(Config)
-  except: defaultConfig
+  except CatchableError: defaultConfig
 
 proc readTheme*(file: string): ColorTheme =
   try:    file.readFile.fromJson(ColorTheme)
-  except: defaultColorTheme
+  except CatchableError: defaultColorTheme
 
 proc readIcons*() : IconTheme =
   return IconTheme(

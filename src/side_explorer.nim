@@ -83,8 +83,7 @@ proc newFiles(file_path: string): seq[File] =
         info: info
       )
       files.add(new_file)
-    except:
-      discard
+    except CatchableError: discard
 
   return files
 

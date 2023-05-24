@@ -76,7 +76,7 @@ proc newFile(file_path: string): Option[File] =
       ext: ext,
       info: info
     ))
-  except:
+  except CatchableError:
     return none(File)
 
 proc updateDir*(explorer: var Explorer, path: string) =
