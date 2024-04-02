@@ -109,7 +109,7 @@ component TextArea {.noexport.}:
   )
 
   if mouseHover parentBox:
-    cursor = Cursor.text
+    setCursor Cursor(kind: builtin, builtin: BuiltinCursor.arrow)
 
   let
     gt = glyphTableStack[^1]

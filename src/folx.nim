@@ -31,7 +31,7 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
 
   if preferWorkFolderResources: configuration.workFolderResources()
   
-  let window = newWindow(
+  let window = newSoftwareRenderingWindow(
     title="folx", size=config.window.size,
     frameless = if config.window.customTitleBar: true else: false,
     transparent = if config.window.customTitleBar: true else: false,
@@ -212,22 +212,22 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
           ]
 
 
-  window.onRender = proc(e: RenderEvent) =
+  window.eventsHandler.onRender = proc(e: RenderEvent) =
     image.clear colorTheme.bgTextArea.color.rgbx
-    cursor = Cursor.arrow
+    setCursor Cursor(kind: builtin, builtin: BuiltinCursor.arrow)
 
     frame(w = window.size.x, h = window.size.y, clip=true):
       withContext r:
         handleFolx()
 
     window.drawImage image.data.toBgrx, ivec2(image.width.int32, image.height.int32)
-    window.cursor = cursor
+    window.cursor = globalCursor
     isLeftClick = false
     isLeftDown = false
     isLeftUp = false
 
 
-  window.onScroll = proc(e: ScrollEvent) =
+  window.eventsHandler.onScroll = proc(e: ScrollEvent) =
     if e.delta == 0: return
     if Key.lcontrol in window.keyboard.pressed or Key.rcontrol in window.keyboard.pressed:
       let newSize = (editor_gt.font.size * (pow(16 / 17, e.delta))).round.max(1)
@@ -262,18 +262,20 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
         )
 
 
-  window.onResize = proc(e: ResizeEvent) =
+  window.eventsHandler.onResize = proc(e: ResizeEvent) =
     if window.size.x * window.size.y == 0: return
     image = newImage(window.size.x, window.size.y)
     r = image.newContext
 
-  window.onMouseMove = proc(e: MouseMoveEvent) =
+  window.eventsHandler.onMouseMove = proc(e: MouseMoveEvent) =
     title.onMouseMove(
       window = window,
     )
     redraw window
 
-  window.onKeydown = proc(e: KeyEvent) =
+  window.eventsHandler.onKey = proc(e: KeyEvent) =
+    if not e.pressed: return
+
     if window.check(e, kc({Key.lcontrol}, Key.e)):
       explorer.display = false
       side_explorer.display = not side_explorer.display
@@ -292,8 +294,11 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
     
     elif window.check(e, kc({Key.lcontrol}, Key.v)):
       if not side_explorer.display and opened_files.len != 0:
+        
+        var clipboard = clipboard()  # workaround
+        
         text_editor.onPaste(
-          text = newText($clipboard),
+          text = newText($clipboard),  # todo: fix in siwin
           onTextChange = (proc =
             redraw window
           )
@@ -337,19 +342,18 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
 
     redraw window
   
-  window.onClick = proc(e: ClickEvent) =
+  window.eventsHandler.onClick = proc(e: ClickEvent) =
     if e.button == MouseButton.left: isLeftClick = true
     redraw window
   
-  window.onMouseDown = proc(e: MouseButtonEvent) =
-    if e.button == MouseButton.left: isLeftDown = true
-    redraw window
-  
-  window.onMouseUp = proc(e: MouseButtonEvent) =
-    if e.button == MouseButton.left: isLeftUp = true
+  window.eventsHandler.onMouseButton = proc(e: MouseButtonEvent) =
+    if e.pressed:
+      if e.button == MouseButton.left: isLeftDown = true
+    else:
+      if e.button == MouseButton.left: isLeftUp = true
     redraw window
 
-  window.onTextInput = proc(e: TextInputEvent) =
+  window.eventsHandler.onTextInput = proc(e: TextInputEvent) =
     if Key.lsystem in window.keyboard.pressed or Key.rsystem in window.keyboard.pressed: return
 
     if focusTextEditor and opened_files.len != 0:
@@ -361,7 +365,7 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
         )
       )
 
-  window.onTick = proc(e: TickEvent) =
+  window.eventsHandler.onTick = proc(e: TickEvent) =
     # blink timeout
     # todo: use delta time
     if config.caretBlink:

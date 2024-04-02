@@ -7,7 +7,7 @@ type
     key*: Key
 
 var
-  cursor*: Cursor
+  globalCursor*: Cursor
   isLeftClick*: bool
   isLeftDown*: bool
   isLeftUp*: bool
@@ -33,3 +33,7 @@ proc contains*(r: Rect, v: Vec2): bool =
 
 proc mouseHover*(box: Rect): bool =
   mousePos in box
+
+
+proc setCursor*(v: Cursor) =
+  globalCursor = v
