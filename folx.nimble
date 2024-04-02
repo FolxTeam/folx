@@ -18,10 +18,18 @@ let dataDir =
   else: "."
 
 
-before install:
+proc installResources =
   echo "installing resources..."
+  if dirExists dataDir: rmDir dataDir
   mkdir dataDir
   cpdir "resources", dataDir/"resources"
+
+
+before install:
+  installResources()
+
+before build:
+  installResources()
 
 
 task buildWindows, "cross-compile from Linux to Windows":
