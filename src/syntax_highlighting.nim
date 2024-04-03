@@ -2,6 +2,10 @@ import sequtils, unicode, streams
 import pixie
 import text
 
+const
+  OpChars  = ['+', '-', '*', '/', '\\', '<', '>', '!', '?', '^', '.',
+              '|', '=', '%', '&', '$', '@', '~', ':']
+
 type
   CodeKind* = enum
     sText
@@ -38,7 +42,7 @@ type
 proc parseNimCode*(s: Text, state: NimParseState, len = 100): tuple[segments: seq[CodeKind], state: NimParseState] =
   result.state = state
   result.segments = newSeq[CodeKind](len)
-
+  let opRunes = OpChars.toRunes
   proc parseNext(s: Text, state: var NimParseState, res: var seq[CodeKind]) =
     template rune(s: string): Rune = static(s.runeAt(0))
     template runes(s: string): seq[Rune] = static(s.toRunes)
@@ -327,17 +331,16 @@ proc parseNimCode*(s: Text, state: NimParseState, len = 100): tuple[segments: se
     elif r == rune"'":             chr
     elif r == rune"#":             comment
     elif r in "0123456789".runes:  number
-    
+    elif r in opRunes:
+      add sOperatorWord, 1
+
     elif r == "\"".rune and peek(1) == r and peek(2) == r:
       multilineStr
     
     elif r == "\"".rune:           str
     else:
       add sText
-    
-    # todo: operators
 
-  
   for _ in 1..len:
     if result.state.pos > s.high: return
     s.parseNext(result.state, result.segments)
