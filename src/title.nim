@@ -16,17 +16,18 @@ proc onMouseMove*(
 
 component TitleBarButton {.noexport.}:
   proc handle(
-    icon: Image,
+    icon: Image,  # todo: use texture instead
     bg: ColorRgb = colorTheme.bgTitleBar,
   )
 
   Rect:
     color =
-      if mouseHover parentBox: colorTheme.bgTitleBarSelect
-      else: bg
+      if mouseHover parentBox: colorTheme.bgTitleBarSelect.color
+      else: bg.color
 
   frame(centerIn = parentBox, w = icon.width, h = icon.height):
-    contextStack[^1].image.draw(icon, translate(parentBox.xy))
+    Image icon(w = icon.width, h = icon.height):
+      discard
 
 
 component TitleBar:
@@ -38,7 +39,7 @@ component TitleBar:
     focusTextEditor: var bool,
   )
   
-  Rect: color = colorTheme.bgTitleBar
+  Rect: color = colorTheme.bgTitleBar.color
 
   TitleBarButton iconTheme.explorer(w = 65, h = 40):
     bg =

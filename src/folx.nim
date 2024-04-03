@@ -1,6 +1,7 @@
 import sequtils, os, times, math, unicode, std/monotimes, options
-import cligen
+import pkg/[cligen, opengl]
 import gui, configuration, git, text, text_editor, side_explorer, explorer, title, status_bar, welcome
+import ./graphics/[globals, shaders, shaderutils]
 
 proc contains*(b: Rect, a: GVec2): bool =
   let a = a.vec2
@@ -30,12 +31,16 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
     else: files[0].splitPath.head
 
   if preferWorkFolderResources: configuration.workFolderResources()
-  
-  let window = newSoftwareRenderingWindow(
+
+  let window = newOpenglWindow(
     title="folx", size=config.window.size,
     frameless = if config.window.customTitleBar: true else: false,
     transparent = if config.window.customTitleBar: true else: false,
   )
+
+  loadExtensions()
+
+  global_drawContext = newDrawContext()
 
   var
     editor_gt    = readFont(rc config.font).newGlyphTable(config.fontSize)
@@ -215,12 +220,17 @@ proc folx(files: seq[string] = @[], workspace: string = "", preferWorkFolderReso
   window.eventsHandler.onRender = proc(e: RenderEvent) =
     image.clear colorTheme.bgTextArea.color.rgbx
     setCursor Cursor(kind: builtin, builtin: BuiltinCursor.arrow)
+    
+    glClearColor colorTheme.bgTextArea.color.r, colorTheme.bgTextArea.color.g, colorTheme.bgTextArea.color.b, colorTheme.bgTextArea.color.a
+    glClear(GL_COLOR_BUFFER_BIT)
+
+    let size = e.window.size
+    glViewport 0, 0, size.x.GLsizei, size.y.GLsizei
+    global_drawContext.updateSizeRender(size)
 
     frame(w = window.size.x, h = window.size.y, clip=true):
-      withContext r:
-        handleFolx()
+      handleFolx()
 
-    window.drawImage image.data.toBgrx, ivec2(image.width.int32, image.height.int32)
     window.cursor = globalCursor
     isLeftClick = false
     isLeftDown = false

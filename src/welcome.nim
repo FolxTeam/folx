@@ -11,11 +11,11 @@ component Item {.noexport.}:
     bg = colorTheme.bgTextArea
 
   Rect(x = label.width(glyphTableStack[^1]) + 8, y = -2, w = hotkey.width(glyphTableStack[^1]) + 14, h = parentBox.h + 4):
-    color = colorTheme.cMiddle
+    color = colorTheme.cMiddle.color
     radius = 5
 
     Rect(left = 2, top = 2, right = 2, bottom = 2):
-      color = colorTheme.bgTextArea
+      color = colorTheme.bgTextArea.color
       radius = 5
 
       Text hotkey(left = 5, top = 1, right = 5, bottom = 1):

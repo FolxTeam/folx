@@ -12,7 +12,7 @@ component StatusBar:
   const marginEnd = vec2(10, 2)
   const spacing = 20
 
-  Rect: color = bg
+  Rect: color = bg.color
 
   var x = margin.x
   for (f, v) in fieldsStart:
@@ -40,5 +40,6 @@ component StatusBar:
 
     if i.field == "git":
       frame(verticalCenterIn = parentBox, x = x, w = iconTheme.git.width, h = iconTheme.git.height):
-        contextStack[^1].image.draw(iconTheme.gitbranch, translate(parentBox.xy) * scale(vec2(0.65, 0.65)))
+        Image iconTheme.git(w = iconTheme.git.width, h = iconTheme.git.height):
+          discard
       x -= spacing

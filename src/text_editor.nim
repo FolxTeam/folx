@@ -155,7 +155,7 @@ component LineNumbers {.noexport.}:
 
     if i == cursor.y:
       Rect(y=y, h=dy):
-        color = colorTheme.bgLineNumbersSelect
+        color = colorTheme.bgLineNumbersSelect.color
 
     Text s(left = parentBox.w - 10 - w, y = y, h = dy):
       color = sLineNumber.color
@@ -179,7 +179,7 @@ component ScrollBar {.noexport.}:
     b = (pos + size.float32) / total.float32
 
   Rect(y = parentBox.h * a, h = parentBox.h * (b - a)):
-    color = colorTheme.bgScrollBar
+    color = colorTheme.bgScrollBar.color
 
 #todo: move variables
 var blink* = true;
@@ -216,7 +216,7 @@ component Cursor:
     Rect(w = width, h = round(gt.font.size * 1.27)):
       x = text[lineStart ..< lineStart + x].toOpenArray.width(gt).float32 + cursor_width
       y = round(gt.font.size * 1.27) * (y.float32 - pos)
-      color = colorTheme.sText
+      color = colorTheme.sText.color
 
 
 component TextEditor:

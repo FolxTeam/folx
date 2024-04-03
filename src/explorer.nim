@@ -188,8 +188,8 @@ component Disk {.noexport.}:
   )
   
   if selected:
-    Rect: color = colorTheme.bgSelection
-    Rect(w = 2): color = colorTheme.bgSelectionLabel
+    Rect: color = colorTheme.bgSelection.color
+    Rect(w = 2): color = colorTheme.bgSelectionLabel.color
 
   Text disk(x = 10):
     color = colorTheme.cActive
@@ -207,14 +207,16 @@ component File {.noexport.}:
   let dy = round(glyphTableStack[^1].font.size * 1.27)
   
   if selected:
-    Rect: color = colorTheme.bgSelection
-    Rect(w = 2): color = colorTheme.bgSelectionLabel
+    Rect: color = colorTheme.bgSelection.color
+    Rect(w = 2): color = colorTheme.bgSelectionLabel.color
   
   let bg =
     if selected: colorTheme.bgSelection
     else: bg
   
-  contextStack[^1].image.draw(getIcon(file), translate(parentBox.xy + vec2(20, 4)) * scale(vec2(0.06 * dy, 0.06 * dy)))
+  let icon = getIcon(file)
+  Image icon(x = 20, y = 4, w = icon.width.float * 0.06 * dy, h = icon.height.float * 0.06 * dy):
+    discard
 
   Text (file.name & file.ext)(x = 40, w = 200, clip = true):
     color = colorTheme.cActive

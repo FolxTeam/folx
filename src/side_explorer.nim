@@ -148,15 +148,14 @@ component Item {.noexport.}:
   )
 
   let
-    box = parentBox
     gt = glyphTableStack[^1]
     dy = round(gt.font.size * 1.40)
 
   if selected:
     updateExplorer(explorer, file)
 
-    Rect: color = colorTheme.bgSelection
-    Rect(w = 2): color = colorTheme.bgSelectionLabel
+    Rect: color = colorTheme.bgSelection.color
+    Rect(w = 2): color = colorTheme.bgSelectionLabel.color
 
   if isLeftClick and mouseHover parentBox:
     if file.info.kind == PathComponent.pcFile:
@@ -168,7 +167,9 @@ component Item {.noexport.}:
         explorer.open_dirs.add(OpenDir(path: file.path / file.name & file.ext))
     explorer.item_index = count_item 
   
-  contextStack[^1].image.draw(getIcon(explorer, file), translate(vec2(box.x + 20 + nesting_indent.float32 * 20, box.y + 4)) * scale(vec2(icon_const * dy, icon_const * dy)))
+  let icon = getIcon(explorer, file)
+  Image icon(x = 20 + nesting_indent.float32 * 20, y = 4, w = icon.width.float * icon_const * dy, h = icon.height.float * icon_const * dy):
+    discard
 
   Text text(x = 20 + nesting_indent.float32 * 20 + 20):
     color = colorTheme.cActive
@@ -221,7 +222,7 @@ component SideExplorer:
     count_items = 0
     explorer.count_items = 0
 
-    Rect: color = colorTheme.bgExplorer
+    Rect: color = colorTheme.bgExplorer.color
     
     Title(h = dy * 2):
       explorer = explorer
