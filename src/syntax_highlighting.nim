@@ -332,7 +332,7 @@ proc parseNimCode*(s: Text, state: NimParseState, len = 100): tuple[segments: se
     elif r == rune"#":             comment
     elif r in "0123456789".runes:  number
     elif r in opRunes:
-      add sOperatorWord, 1
+      add sOperator, 1
 
     elif r == "\"".rune and peek(1) == r and peek(2) == r:
       multilineStr
