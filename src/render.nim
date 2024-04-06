@@ -17,6 +17,7 @@ type
 var
   # contextStack*: seq[Context]
   glyphTableStack*: seq[GlyphTable]
+  oneLoadTexture: Textures  # workaround https://github.com/FolxTeam/folx/issues/21 until rendering will be completely refactored
 
 
 template withGlyphTable*(x: GlyphTable, body) =
@@ -151,12 +152,13 @@ component Image:
   glEnable(GlBlend)
   glBlendFuncSeparate(GlOne, GlOneMinusSrcAlpha, GlOne, GlOne)
 
-  let tex = newTextures(1)
-  tex[0].loadTexture g
-  glBindTexture(GlTexture2d, tex[0])
+  if oneLoadTexture == nil:
+    oneLoadTexture = newTextures(1)
+  oneLoadTexture[0].loadTexture g
+  glBindTexture(GlTexture2d, oneLoadTexture[0])
   
   use shader.shader
-  global_drawContext.passTransform(shader, pos=parentBox.xy, size=parentBox.wh)
+  global_drawContext.passTransform(shader, pos=parentBox.xy.ivec2.vec2, size=parentBox.wh)
   shader.color.uniform = color.vec4
   if clipStack.len > 0:
     shader.clipRectXy.uniform = clipStack[^1].xy - parentBox.xy
