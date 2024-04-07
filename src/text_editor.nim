@@ -22,7 +22,7 @@ proc bound(cursor: var IVec2, text: Text) =
 
 proc color*(sk: CodeKind): ColorRGB =
   case sk
-  of sKeyword, sOperatorWord, sBuiltinType:
+  of sKeyword, sOperatorWord, sBuiltinType, sOperator:
     colorTheme.sKeyword
 
   of sControlFlow:
