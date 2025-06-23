@@ -226,7 +226,6 @@ macro component*(name, body: untyped) =
   of Ident(strVal: @ni): ni
   else:
     error("unexpected syntax", name)
-    ""
 
   proc isTypename(x: NimNode): bool =
     x.kind == nnkIdent and x.strVal.runeAt(0).isUpper

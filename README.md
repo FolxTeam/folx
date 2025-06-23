@@ -1,5 +1,5 @@
 <p>
-  <h3>Folx: lightweght IDE / text editor</h3>
+  <h3>Folx: lightweght text editor with syntax highlighting for Nim</h3>
 </p>
 
 ![Screenshot](https://ie.wampi.ru/2022/04/21/41cfc2c0b351d171e.png)
@@ -31,3 +31,8 @@ to run
 flatpak run org.FolxTeam.folx
 ```
 todo: add folx to flathub repos
+
+todo:
+- make folx more lightweight
+- add text selection
+- make folx self-contained
