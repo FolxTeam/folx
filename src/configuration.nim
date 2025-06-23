@@ -120,7 +120,7 @@ const defaultConfig = Config(
   caretBlink: false,
   caretStyle: CaretStyle.line,
 )
-static: writeFile "config.default.json", defaultConfig.toJson.parseJson.pretty
+static: writeFile currentSourcePath().parentDir / "../config.default.json", defaultConfig.toJson.parseJson.pretty
 
 
 const defaultColorTheme = ColorTheme(
@@ -156,7 +156,7 @@ const defaultColorTheme = ColorTheme(
   sError: rgb(255, 64, 64),
   sText: rgb(212, 212, 212),
 )
-static: writeFile "resources/themes/default.json", defaultColorTheme.toJson.parseJson.pretty
+static: writeFile currentSourcePath().parentDir / "../resources/themes/default.json", defaultColorTheme.toJson.parseJson.pretty
 
 
 proc newHook*(x: var Config) =
